@@ -919,13 +919,20 @@
 
         .report-grid {
             display: grid;
-            grid-template-columns: 1fr;
+            grid-template-columns: 1fr 1fr;
             gap: 12px;
         }
 
-        @media (min-width: 600px) {
+        @media (min-width: 600px) and (max-width: 1023px) {
             .report-grid {
                 grid-template-columns: 1fr 1fr;
+            }
+        }
+
+        @media (min-width: 1024px) {
+            .report-grid {
+                grid-template-columns: 1fr 1fr 1fr; /* 3 columnas en pantallas grandes */
+            }
         }
 
         .btn-report {
@@ -5831,5 +5838,6 @@ function collectInsumosFromProjectGlobal(type) {
 </body>
 
 </html>
+
 
 
