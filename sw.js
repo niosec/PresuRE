@@ -1,4 +1,4 @@
-const CACHE_NAME = 'presure-cache-v1.1';
+const CACHE_NAME = 'presure-cache-v1.2';
 // Lista exacta de recursos extraída de tu código HTML
 const urlsToCache = [
   './',
@@ -63,3 +63,4 @@ self.addEventListener('fetch', event => {
       })
   );
 });
+
