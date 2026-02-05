@@ -1049,7 +1049,7 @@
         <button class="btn btn-danger btn-sm" onclick="resetData()" title="Borrar todo">
             <i class="fas fa-trash-alt"></i>
         </button>
-        <input type="file" id="fileProject" accept=".json,application/json" style="display:none" onchange="loadProjectJSON(this)">
+        <input type="file" id="fileProject" accept=".json,application/json,text/json,text/plain" style="display:none" onchange="loadProjectJSON(this)">
     </div>
 </header>
 
@@ -4515,8 +4515,28 @@ Cantidades: ${s.decimals_qty} decimales`;
     }
 
     function loadProjectJSON(input) {
-        const r = new FileReader();
-        r.onload = function(e) { 
+        const file = input.files[0];
+        if (!file) return;
+
+        // Validación del tipo de archivo para Android
+        const fileName = file.name.toLowerCase();
+        const isValidExtension = fileName.endsWith('.json');
+        const isValidMimeType = file.type === 'application/json' || 
+                            file.type === 'text/json' || 
+                            file.type === 'text/plain' || 
+                            file.type === '';
+
+        // Si no cumple ni extensión ni tipo MIME válido, pero el usuario lo seleccionó
+        // (Android a veces no envía el tipo MIME), permitirlo si tiene extensión .json
+        if (!isValidExtension && !isValidMimeType) {
+            showToast('Por favor, seleccione un archivo JSON válido.');
+            input.value = '';
+            return;
+        }
+
+        const reader = new FileReader();
+        
+        reader.onload = function(e) { 
             try { 
                 const loadedData = JSON.parse(e.target.result);
                 
@@ -4546,12 +4566,18 @@ Cantidades: ${s.decimals_qty} decimales`;
             }
             catch(err) { 
                 console.error(err);
-                showToast("Error al leer el archivo JSON"); 
+                showToast("Error al leer el archivo JSON. Verifique que el archivo sea válido."); 
             }
             // Limpiar el input para permitir cargar el mismo archivo dos veces seguidas si se desea
             input.value = '';
         };
-        r.readAsText(input.files[0]);
+        
+        reader.onerror = function() {
+            showToast("Error al leer el archivo");
+            input.value = '';
+        };
+        
+        reader.readAsText(file);
     }
 
     function exportBankJSON() {
