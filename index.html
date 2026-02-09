@@ -15,8 +15,8 @@
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="PresuRE">
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-    <!-- Librería Sortable para Drag & Drop -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.3.0/exceljs.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.15.0/Sortable.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.29/jspdf.plugin.autotable.min.js"></script>
@@ -1027,896 +1027,929 @@
 </head>
 <body>
 
-<header>
-    <div class="header-title">
-        <img src="icon-192.png" alt="Logo" style="width: 30px; height: 30px; vertical-align: middle;">
-        PresuRE v1.2 
-        <span id="save-indicator" class="status-dot" title="Estado de guardado"></span>
-    </div>
-    <div class="header-actions">
-        <button class="btn btn-secondary" onclick="openConfigModal()" title="Configuración">
-            <i class="fas fa-cog"></i>
-        </button>
-        <button class="btn btn-secondary" onclick="document.getElementById('fileProject').click()">
-            <i class="fas fa-folder-open"></i> Abrir
-        </button>
-        <button class="btn btn-success" onclick="openSaveOptionsModal()">
-            <i class="fas fa-save"></i> Guardar
-        </button>
-        <button class="btn btn-info" onclick="openReportModal()" title="Generar Reportes">
-            <i class="fas fa-print"></i>
-        </button>
-        <button class="btn btn-danger btn-sm" onclick="resetData()" title="Borrar todo">
-            <i class="fas fa-trash-alt"></i>
-        </button>
-        <input type="file" id="fileProject" accept=".json,application/json,text/json,text/plain" style="display:none" onchange="loadProjectJSON(this)">
-    </div>
-</header>
+    <header>
+        <div class="header-title">
+            <img src="icon-192.png" alt="Logo" style="width: 30px; height: 30px; vertical-align: middle;">
+            PresuRE v1.2 
+            <span id="save-indicator" class="status-dot" title="Estado de guardado"></span>
+        </div>
+        <div class="header-actions">
+            <button class="btn btn-secondary" onclick="openConfigModal()" title="Configuración">
+                <i class="fas fa-cog"></i>
+            </button>
+            <button class="btn btn-secondary" onclick="document.getElementById('fileProject').click()">
+                <i class="fas fa-folder-open"></i> Abrir
+            </button>
+            <button class="btn btn-success" onclick="openSaveOptionsModal()">
+                <i class="fas fa-save"></i> Guardar
+            </button>
+            <button class="btn btn-info" onclick="openReportModal()" title="Generar Reportes">
+                <i class="fas fa-print"></i>
+            </button>
+            <button class="btn btn-danger btn-sm" onclick="openDeleteModal()" title="Opciones de Borrado">
+                <i class="fas fa-trash-alt"></i>
+            </button>
+            <input type="file" id="fileProject" accept=".json,application/json,text/json,text/plain" style="display:none" onchange="loadProjectJSON(this)">
+        </div>
+    </header>
 
-<div class="container">
-    
-    <div class="tabs">
-        <div class="tab active" onclick="switchTab('b1')">Presupuesto</div>
-        <div class="tab" onclick="switchTab('items')">Banco</div>
-        <div class="tab" onclick="switchTab('db')">Insumos</div>
-        <div class="tab" onclick="switchTab('calc')" title="Calculadora de Materiales"><i class="fas fa-calculator"></i></div>
-    </div>
+    <div class="container">
+        
+        <div class="tabs">
+            <div class="tab active" onclick="switchTab('b1')" title="Elabore su presupuesto de obra">Presupuesto</div>
+            <div class="tab" onclick="switchTab('items')" title="Base de datos de Items">Banco</div>
+            <div class="tab" onclick="switchTab('db')" title="Base de datos de Insumos">Insumos</div>
+            <div class="tab" onclick="switchTab('calc')" title="Calculadora de Materiales"><i class="fas fa-calculator"></i></div>
+        </div>
 
-    <div id="panel-b1" class="panel active">
-        <div style="margin-bottom:20px;">
-            <h2 style="margin:0 0 12px 0; color:var(--primary); font-size:1.5rem;">Presupuesto de Obra</h2>
-            
-            <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:center; justify-content: space-between;">
-                <div style="display:flex; gap:8px;">
-                    <button class="btn btn-primary" onclick="openItemBankModalForSelect()">
-                        <i class="fas fa-plus-square"></i> Agregar
-                    </button>
-                    <button class="btn btn-secondary" onclick="createEmptyItemB1()">
-                        <i class="fas fa-plus"></i> Nuevo
-                    </button>
-                </div>
+        <div id="panel-b1" class="panel active">
+            <div style="margin-bottom:20px;">
+                <h2 style="margin:0 0 12px 0; color:var(--primary); font-size:1.5rem;">Presupuesto de Obra</h2>
                 
-                <div style="display:flex; gap:8px;">
-                     <button class="btn btn-success" onclick="exportB1ToExcel()">
-                        <i class="fas fa-file-excel"></i> Excel
-                    </button>
-                    <div class="insumos-buttons">
-                        <button class="btn btn-purple" onclick="openInsumosModal('materiales')" title="Ver materiales usados"><i class="fas fa-box"></i></button>
-                        <button class="btn btn-warning" onclick="openInsumosModal('mano_obra')" title="Ver mano de obra usada"><i class="fas fa-users"></i></button>
-                        <button class="btn btn-info" onclick="openInsumosModal('equipos')" title="Ver equipos usados"><i class="fas fa-tools"></i></button>
+                <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:center; justify-content: space-between;">
+                    <div style="display:flex; gap:8px;">
+                        <button class="btn btn-primary" onclick="openItemBankModalForSelect()" title="Agregar item de Base de datos">
+                            <i class="fas fa-plus-square"></i> Agregar
+                        </button>
+                        <button class="btn btn-secondary" onclick="createEmptyItemB1()" title="Crear nuevo item">
+                            <i class="fas fa-plus"></i> Nuevo
+                        </button>
+                    </div>
+                    
+                    <div style="display:flex; gap:8px;">                    
+                        <button class="btn btn-success" onclick="exportB1ToExcel()" title="Exportar presupuesto a Excel">
+                            <i class="fas fa-file-excel"></i> Excel
+                        </button>
+                        <div style="display:inline-block; margin-left:5px;">
+                            <input type="file" id="fileImportBudget" accept=".xlsx,.csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel" style="display:none" onchange="importBudgetFromExcel(this)">
+                            <button class="btn btn-warning" onclick="document.getElementById('fileImportBudget').click()" title="Importar Volúmenes de Obra">
+                                <i class="fas fa-file-import"></i> Importar
+                            </button>
+                        </div>
+
+                        <div class="insumos-buttons">
+                            <button class="btn btn-purple" onclick="openInsumosModal('materiales')" title="Ver materiales usados"><i class="fas fa-box"></i></button>
+                            <button class="btn btn-warning" onclick="openInsumosModal('mano_obra')" title="Ver mano de obra usada"><i class="fas fa-users"></i></button>
+                            <button class="btn btn-info" onclick="openInsumosModal('equipos')" title="Ver equipos usados"><i class="fas fa-tools"></i></button>
+                        </div>
                     </div>
                 </div>
-            </div>
-        </div>
-        
-        <div class="table-container" style="margin-bottom: 0; border-bottom: none; border-radius: 6px 6px 0 0;">
-            <table id="table-b1" style="min-width: 800px;">
-                <thead>
-                    <tr>
-                        <th style="width:50px">Editar</th>
-                        <th style="width:35px">Nº</th>
-                        <th>Descripción del Ítem</th>
-                        <th style="width:55px">Und.</th>
-                        <th style="width:80px">Cant.</th>
-                        <th style="width:80px">P.Unit</th>
-                        <th style="width:80px">Total</th>
-                        <th style="width:100px">Acciones</th>
-                    </tr>
-                </thead>
-                <tbody id="b1-body"></tbody>
-            </table>
-        </div>
-
-        <div class="module-bar">
-            <div class="module-tabs-container" id="module-tabs">
-                <!-- Las pestañas de módulos se generarán aquí -->
-            </div>
-            <div class="module-controls">
-                <button class="module-btn" onclick="addModule()" title="Nuevo Módulo">
-                    <i class="fas fa-plus"></i>
-                </button>
-                 <button class="module-btn" onclick="renameCurrentModule()" title="Renombrar Módulo">
-                    <i class="fas fa-pen"></i>
-                </button>
-                <button class="module-btn" onclick="cloneCurrentModule()" title="Clonar Módulo">
-                    <i class="fas fa-copy"></i>
-                </button>
-                <button class="module-btn" onclick="deleteCurrentModule()" title="Eliminar Módulo" style="color:#e53e3e;">
-                    <i class="fas fa-trash-alt"></i>
-                </button>
-            </div>
-        </div>
-        
-        <div style="margin-top:15px; display:flex; flex-direction:column; gap:5px; align-items:flex-end;">
-            <div style="font-size:1rem; color:#4a5568; padding:10px;">
-                Subtotal <span id="current-module-name-display" style="font-weight:600;">Módulo</span>: 
-                <span id="module-total-display" style="font-weight:700;">0.00</span> Bs
-            </div>
-            <div style="font-size:1.3rem; font-weight:700; color:var(--primary); padding:10px; background:#f1f5f9; box-sizing: border-box; border-radius:8px; width:100%; text-align:right;">
-                Total Presupuesto: <span id="grand-total-display">0.00</span> Bs
-            </div>
-        </div>
-
-        <div id="b1-pagination" class="pagination" style="display: none;">
-            <button class="btn btn-sm btn-secondary" onclick="changePage('b1', -1)"><i class="fas fa-chevron-left"></i> Anterior</button>
-            <span class="pagination-info" id="b1-page-info">Página 1 de 1</span>
-            <button class="btn btn-sm btn-secondary" onclick="changePage('b1', 1)">Siguiente <i class="fas fa-chevron-right"></i></button>
-        </div>
-    </div>
-
-    <div id="panel-calc" class="panel">
-        <div style="background:#fff; padding:15px; border-radius:8px; border:1px solid #e2e8f0; box-shadow: 0 2px 4px rgba(0,0,0,0.05); margin-bottom:15px;">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom:15px; border-bottom:1px solid #edf2f7; padding-bottom:10px;">
-                <h2 style="margin:0; color:var(--primary); font-size:1.3rem;">
-                    Calculadora de Materiales
-                </h2>
-                <button onclick="printCalcReport()" class="btn-primary" style="background-color: var(--accent); padding: 8px 16px; font-size: 0.9rem; border: none; transition: opacity 0.2s; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
-                    <i class="fas fa-print"></i> Imprimir Reporte
-                </button>
             </div>
             
-            <div style="display:flex; gap:12px; flex-wrap:wrap; align-items:flex-end;">
-                
-                <div style="flex: 2; min-width:250px; position:relative;">
-                    <label class="font-bold" style="display:block; margin-bottom:4px; color:#4a5568; font-size:0.85rem;">1. Buscar Ítem (APU):</label>
-                    <div style="position:relative;">
-                        <i class="fas fa-search" style="position:absolute; left:10px; top:50%; transform:translateY(-50%); color:#a0aec0;"></i>
-                        <input type="text" id="calc-search-input" placeholder="Escribe para buscar..." 
-                               onkeyup="searchCalcItem()" 
-                               style="padding-left:32px; width:100%; height:38px;">
-                    </div>
-                    <div id="calc-search-results" style="display:none; position:absolute; top:100%; left:0; width:100%; max-height:200px; overflow-y:auto; background:white; border:1px solid #cbd5e0; border-radius:0 0 6px 6px; z-index:100; box-shadow:0 4px 6px rgba(0,0,0,0.1);"></div>
-                </div>
-
-                <div style="flex: 1.5; min-width:180px; background:#ebf8ff; padding:8px 12px; border-radius:6px; border:1px solid #bee3f8; height:38px; display:flex; flex-direction:column; justify-content:center;">
-                    <div id="calc-selected-name" style="font-weight:700; color:var(--primary); font-size:0.9rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">- Seleccione ítem -</div>
-                    <div style="font-size:0.75rem;">Unidad: <span id="calc-selected-unit" style="font-weight:600;">-</span></div>
-                </div>
-
-                <div style="width:120px;">
-                    <label class="font-bold" style="display:block; margin-bottom:4px; color:#2f855a; font-size:0.85rem;">2. Cant. Obra:</label>
-                    <input type="text" inputmode="decimal" id="calc-quantity" value="1" 
-                            onchange="this.value = solveMathExpression(this.value); recalcCalcTable()" 
-                            onkeypress="if(event.key === 'Enter') this.blur();"
-                            style="height:38px; font-size:1.1rem; font-weight:bold; color:#2f855a; border:2px solid #48bb78; text-align:center; width:100%;">
-                </div>
-            </div>
-        </div>
-
-        <div class="table-container" style="margin-top:0;">
-            <table id="table-calc">
-                <thead>
-                    <tr>
-                        <th style="width:40%">Descripción insu.</th>
-                        <th style="width:10%">Und.</th>
-                        <th style="width:15%">Cant-Unit.</th>
-                        <th style="width:15%">Fact/Div</th>
-                        <th style="width:20%">Requerido</th>
-                    </tr>
-                </thead>
-                <tbody id="calc-body">
-                    <tr><td colspan="5" class="text-center" style="padding:20px; color:#718096;">Selecciona un ítem para calcular.</td></tr>
-                </tbody>
-            </table>
-        </div>
-    </div>
-
-    <!-- PANEL BANCO CON BUSCADOR MEJORADO -->
-    <div id="panel-items" class="panel">
-        <div style="margin-bottom:20px;">
-            <h2 style="margin:0 0 12px 0; color:var(--primary); font-size:1.5rem;">Banco de Ítems</h2>
-            <div style="display:flex; gap:10px; flex-wrap:wrap; justify-content: space-between; align-items:center;">
-                <div style="display:flex; gap:8px;">
-                    <button class="btn btn-primary" onclick="createBankItem()">
-                        <i class="fas fa-plus"></i> Crear Nuevo
-                    </button>
-                    <button class="btn btn-success" onclick="exportBankJSON()">
-                        <i class="fas fa-file-upload"></i> Exportar
-                    </button>
-                    <button class="btn btn-warning" onclick="document.getElementById('fileBank').click()">
-                        <i class="fas fa-download"></i> Importar
-                    </button>
-                    <input type="file" id="fileBank" accept=".json,application/json" style="display:none" onchange="importBankJSON(this)">
-                </div>
-                
-                <div style="position:relative; flex-grow:1; max-width:350px;">
-                    <i class="fas fa-search" style="position:absolute; left:12px; top:50%; transform:translateY(-50%); color:#a0aec0;"></i>
-                    <input type="text" id="main-bank-search" placeholder="Buscar en el banco..." 
-                           onkeyup="currentPage.bank=1; renderBankList()" 
-                           style="width:100%; padding:8px 8px 8px 35px; border-radius:6px; border:1px solid var(--border);">
-                </div>
-            </div>
-        </div>
-
-        <div style="margin-bottom:20px; padding:15px; background:#f0fff4; border:1px dashed #38a169; border-radius:6px;">
-             <strong><i class="fas fa-file-import"></i> Importar Excel (APUs):</strong>
-             <div style="margin-top:8px; display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
-                <input type="file" id="fileComplexAPU" accept=".xlsx,.csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel,text/csv" style="display:none" onchange="importComplexAPUReport(this)">
-                <button class="btn btn-success btn-sm" onclick="document.getElementById('fileComplexAPU').click()">
-                    <i class="fas fa-file-excel"></i> Seleccionar Archivo
-                </button>
-                <span style="font-size:0.8rem; color:#4a5568;">Formato: Excel con columnas claras</span>
-             </div>
-        </div>
-        
-        <div class="table-container">
-            <table id="table-bank" style="min-width: 650px;">
-                <thead>
-                    <tr>
-                        <th style="width:35px" title="Agregar al presupuesto">aPresu</th>
-                        <th style="width:35px">Cód</th>
-                        <th>Descripción</th>
-                        <th style="width:35px">Und.</th>
-                        <th style="width:80px">Precio Ref.</th>
-                        <th style="width:80px">Acciones</th>
-                    </tr>
-                </thead>
-                <tbody id="bank-body"></tbody>
-            </table>
-        </div>
-        
-        <!-- Paginación para Banco -->
-        <div id="bank-pagination" class="pagination" style="display: none;">
-            <button class="btn btn-sm btn-secondary" onclick="changePage('bank', -1)">
-                <i class="fas fa-chevron-left"></i> Anterior
-            </button>
-            <span class="pagination-info" id="bank-page-info">Página 1 de 1</span>
-            <button class="btn btn-sm btn-secondary" onclick="changePage('bank', 1)">
-                Siguiente <i class="fas fa-chevron-right"></i>
-            </button>
-        </div>
-    </div>
-
-    <div id="panel-editor" class="panel">
-        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px; border-bottom:2px solid var(--accent); padding-bottom:12px;">
-            <h3 style="margin:0; color:var(--accent); font-size:1.3rem;" id="editor-title">Editar APU</h3>
-            <div style="display:flex; gap:8px;">
-                <!-- Botones de navegación movidos aquí, al lado del botón Descartar -->
-                <button class="btn btn-warning btn-sm" onclick="navigateEditor(-1)" title="Anterior (Ctrl+←)" style="width: 30px;">
-                    <i class="fas fa-chevron-left"></i>
-                </button>
-                <button class="btn btn-warning btn-sm" onclick="navigateEditor(1)" title="Siguiente (Ctrl+→)" style="width: 30px;">
-                    <i class="fas fa-chevron-right"></i>
-                </button>
-
-                <button class="btn btn-secondary" onclick="discardEditor()"> Descartar
-                </button>
-                <button class="btn btn-success" onclick="closeEditor()"> Guardar
-                </button>
-            </div>
-        </div>
-
-        <div class="apu-header-grid">
-            <div>
-                <label class="font-bold">Descripción:</label> 
-                <input type="text" id="apu-desc" onchange="updateEditorMeta()" placeholder="Descripción del ítem">
-            </div>
-            <div style="display:grid; grid-template-columns: 1fr 1fr; gap:12px;">
-                <div>
-                    <label class="font-bold">Unidad:</label> 
-                    <input type="text" id="apu-unit" onchange="updateEditorMeta()" placeholder="Ej: m3, glb">
-                </div>
-                <div>
-                    <label class="font-bold">Cantidad:</label> 
-                    <input type="number" id="apu-qty" onchange="updateEditorMeta()" step="0.01" min="0">
-                </div>
-            </div>
-        </div>
-
-        <div class="apu-body-grid">
-            <div class="apu-details">
-                <div class="resource-group">
-                    <div class="group-header">
-                        <span><i class="fas fa-box"></i> Materiales</span>
-                        <div style="display:flex; gap:5px;"> <button class="btn btn-success btn-sm" onclick="quickCreateResource('materiales')" title="Crear Nuevo y Añadir">
-                                <i class="fas fa-magic"></i> Crear
-                            </button>
-                            <button class="btn btn-primary btn-sm" onclick="openResourceModal('materiales')">
-                                <i class="fas fa-plus"></i> Añadir
-                            </button>
-                        </div>
-                    </div>
-                    <div class="editor-table-container">
-                        <table id="table-mat">
-                            <thead>
-                                <tr>
-                                    <th>Descripción</th>
-                                    <th>Und.</th>
-                                    <th>Rend.</th>
-                                    <th>Precio</th>
-                                    <th>Total</th>
-                                    <th></th>
-                                </tr>
-                            </thead>
-                            <tbody></tbody>
-                        </table>
-                    </div>
-                    <div class="text-right font-bold" style="padding:10px; background:#f8fafc; border-top:1px solid #e2e8f0;">
-                        Subtotal: <span id="sub-mat">0.00</span>
-                    </div>
-                </div>
-
-                <div class="resource-group">
-                    <div class="group-header">
-                        <span><i class="fas fa-users"></i> Mano de Obra</span>
-                        <div style="display:flex; gap:5px;">
-                            <button class="btn btn-success btn-sm" onclick="quickCreateResource('mano_obra')" title="Crear Nuevo y Añadir">
-                                <i class="fas fa-magic"></i> Crear
-                            </button>
-                            <button class="btn btn-primary btn-sm" onclick="openResourceModal('mano_obra')">
-                                <i class="fas fa-plus"></i> Añadir
-                            </button>
-                        </div>
-                    </div>
-                    <div class="editor-table-container">
-                        <table id="table-mo">
-                            <thead>
-                                <tr>
-                                    <th>Descripción</th>
-                                    <th>Und.</th>
-                                    <th>Hrs</th>
-                                    <th>Jornal</th>
-                                    <th>Total</th>
-                                    <th></th>
-                                </tr>
-                            </thead>
-                            <tbody></tbody>
-                        </table>
-                    </div>
-                    <div style="padding:12px; background:#fff; font-size:0.85rem;">
-                        <div class="total-row"><span>Subtotal MO:</span> <span id="mo-basic">0.00</span></div>
-                        <div class="total-row" style="color:var(--accent)">
-                            <span>(+) Cargas Soc. (<span id="lbl-soc"></span>%):</span> 
-                            <span id="mo-soc">0.00</span>
-                        </div>
-                        <div class="total-row" style="color:var(--accent)">
-                            <span>(+) IVA MO (<span id="lbl-iva"></span>%):</span> 
-                            <span id="mo-iva">0.00</span>
-                        </div>
-                        <div class="text-right font-bold" style="margin-top:8px; padding-top:8px; border-top:2px solid #e2e8f0;">
-                            Total Mano de Obra: <span id="sub-mo">0.00</span>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="resource-group">
-                    <div class="group-header">
-                        <span><i class="fas fa-tools"></i> Equipos</span>
-                        <div style="display:flex; gap:5px;">
-                            <button class="btn btn-success btn-sm" onclick="quickCreateResource('equipos')" title="Crear Nuevo y Añadir">
-                                <i class="fas fa-magic"></i> Crear
-                            </button>
-                            <button class="btn btn-primary btn-sm" onclick="openResourceModal('equipos')">
-                                <i class="fas fa-plus"></i> Añadir
-                            </button>
-                        </div>
-                    </div>
-                    <div class="editor-table-container">
-                        <table id="table-eq">
-                            <thead>
-                                <tr>
-                                    <th>Descripción</th>
-                                    <th>Und.</th>
-                                    <th>Rend.</th>
-                                    <th>Tarifa</th>
-                                    <th>Total</th>
-                                    <th></th>
-                                </tr>
-                            </thead>
-                            <tbody></tbody>
-                            <tfoot id="eq-tools-row"></tfoot>
-                        </table>
-                    </div>
-                    <div class="text-right font-bold" style="padding:10px; background:#f8fafc; border-top:1px solid #e2e8f0;">
-                        Total Equipo: <span id="sub-eq">0.00</span>
-                    </div>
-                </div>
-            </div>
-
-            <div>
-                <div class="totals-card">
-                    <h4 style="margin-top:0; border-bottom:1px solid #cbd5e0; padding-bottom:8px; color:var(--primary);">
-                        <i class="fas fa-calculator"></i> Resumen
-                    </h4>
-                    
-                    <div class="total-row"><span>Costo Directo:</span> <strong id="sum-direct">0.00</strong></div>
-                    <div class="total-row"><span>Gastos Grales (<span id="lbl-gg"></span>%):</span> <span id="sum-gg">0.00</span></div>
-                    <div class="total-row"><span>Utilidad (<span id="lbl-util"></span>%):</span> <span id="sum-util">0.00</span></div>
-                    <div class="total-row"><span>Impuesto IT (<span id="lbl-it"></span>%):</span> <span id="sum-it">0.00</span></div>
-                    
-                    <div class="total-final">
-                        <span>P. UNITARIO:</span>
-                        <span id="final-price">0.00</span>
-                    </div>
-                    
-                    <div style="margin-top:15px; font-size:0.8rem; color:#718096; text-align:center;">
-                        <i class="fas fa-info-circle"></i> Precio calculado automáticamente
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <div id="panel-db" class="panel">
-        <div style="margin-bottom:20px;">
-            <h2 style="margin:0 0 12px 0; color:var(--primary); font-size:1.5rem;">Gestión de Insumos</h2>
-            <div style="background:#fff; padding:15px; border:1px solid #e2e8f0; border-radius:6px; display: flex; flex-wrap: wrap; gap: 8px; align-items: center; box-shadow: 0 1px 3px rgba(0,0,0,0.05);">
-                <strong style="color:var(--primary);"><i class="fas fa-file-upload"></i> Carga Masiva:</strong>
-                <input type="file" id="dbFile" accept=".xlsx,.csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel,text/csv" style="flex-grow: 1; max-width: 200px;">
-                <select id="dbImportType" style="padding: 7px 10px; border-radius:4px; border:1px solid #cbd5e0;">
-                    <option value="materiales">Materiales</option>
-                    <option value="mano_obra">Mano de Obra</option>
-                    <option value="equipos">Equipos</option>
-                </select>
-                <button class="btn btn-warning btn-sm" onclick="importDBFromExcel()">
-                    <i class="fas fa-upload"></i> Subir
-                </button>
-                <button class="btn btn-purple btn-sm" onclick="cleanAndMergeDuplicates()" title="Fusionar descripciones idénticas">
-                    <i class="fas fa-broom"></i> Unificar
-                </button>
-                <button class="btn btn-info btn-sm" onclick="syncDbToBank()" title="Actualizar precios del Banco con los de esta lista">
-                    <i class="fas fa-sync"></i> Sincronizar Banco
-                </button>
-            </div>
-            <p style="font-size: 0.8rem; color: #718096; margin-top: 8px;">
-                <i class="fas fa-sort"></i> Toca los títulos para ordenar. La numeración se auto-ajusta (1, 2, 3...) según el orden.
-            </p>
-        </div>
-
-        <div class="db-grid-container">
-            <div>
-                <div class="group-header" style="background:var(--primary); color:white">
-                    <i class="fas fa-box"></i> MATERIALES 
-                    <button class="btn btn-success btn-sm" onclick="addDbRow('materiales')">
-                        <i class="fas fa-plus"></i>
-                    </button>
-                </div>
-                <div class="table-container" style="max-height:450px; overflow-y:auto">
-                    <table id="db-table-materiales" class="db-table">
-                        <thead>
-                            <tr>
-                                <th class="col-code" onclick="toggleDbSort('materiales', 'code')">Nº <i class="fas fa-sort sort-icon"></i></th>
-                                <th class="col-desc" onclick="toggleDbSort('materiales', 'desc')">Descripción <i class="fas fa-sort sort-icon"></i></th>
-                                <th class="col-unit">Und.</th>
-                                <th class="col-price">Precio</th>
-                                <th class="col-action"></th>
-                            </tr>
-                        </thead>
-                        <tbody></tbody>
-                    </table>
-                </div>
-                <!-- Paginación para Materiales -->
-                <div id="db-mat-pagination" class="pagination" style="display: none; margin-top: 10px;">
-                    <button class="btn btn-sm btn-secondary" onclick="changePage('db-mat', -1)">
-                        <i class="fas fa-chevron-left"></i> Anterior
-                    </button>
-                    <span class="pagination-info" id="db-mat-page-info">Página 1 de 1</span>
-                    <button class="btn btn-sm btn-secondary" onclick="changePage('db-mat', 1)">
-                        Siguiente <i class="fas fa-chevron-right"></i>
-                    </button>
-                </div>
-            </div>
-            <div>
-                <div class="group-header" style="background:var(--primary); color:white">
-                    <i class="fas fa-users"></i> MANO DE OBRA 
-                    <button class="btn btn-success btn-sm" onclick="addDbRow('mano_obra')">
-                        <i class="fas fa-plus"></i>
-                    </button>
-                </div>
-                <div class="table-container" style="max-height:450px; overflow-y:auto">
-                    <table id="db-table-mano_obra" class="db-table">
-                        <thead>
-                            <tr>
-                                <th class="col-code" onclick="toggleDbSort('mano_obra', 'code')">Nº <i class="fas fa-sort sort-icon"></i></th>
-                                <th class="col-desc" onclick="toggleDbSort('mano_obra', 'desc')">Descripción <i class="fas fa-sort sort-icon"></i></th>
-                                <th class="col-unit">Und.</th>
-                                <th class="col-price">Jornal</th>
-                                <th class="col-action"></th>
-                            </tr>
-                        </thead>
-                        <tbody></tbody>
-                    </table>
-                </div>
-                <!-- Paginación para Mano de Obra -->
-                <div id="db-mo-pagination" class="pagination" style="display: none; margin-top: 10px;">
-                    <button class="btn btn-sm btn-secondary" onclick="changePage('db-mo', -1)">
-                        <i class="fas fa-chevron-left"></i> Anterior
-                    </button>
-                    <span class="pagination-info" id="db-mo-page-info">Página 1 de 1</span>
-                    <button class="btn btn-sm btn-secondary" onclick="changePage('db-mo', 1)">
-                        Siguiente <i class="fas fa-chevron-right"></i>
-                    </button>
-                </div>
-            </div>
-            <div>
-                <div class="group-header" style="background:var(--primary); color:white">
-                    <i class="fas fa-tools"></i> EQUIPOS 
-                    <button class="btn btn-success btn-sm" onclick="addDbRow('equipos')">
-                        <i class="fas fa-plus"></i>
-                    </button>
-                </div>
-                <div class="table-container" style="max-height:450px; overflow-y:auto">
-                    <table id="db-table-equipos" class="db-table">
-                        <thead>
-                            <tr>
-                                <th class="col-code" onclick="toggleDbSort('equipos', 'code')">Nº <i class="fas fa-sort sort-icon"></i></th>
-                                <th class="col-desc" onclick="toggleDbSort('equipos', 'desc')">Descripción <i class="fas fa-sort sort-icon"></i></th>
-                                <th class="col-unit">Und.</th>
-                                <th class="col-price">Tarifa</th>
-                                <th class="col-action"></th>
-                            </tr>
-                        </thead>
-                        <tbody></tbody>
-                    </table>
-                </div>
-                <!-- Paginación para Equipos -->
-                <div id="db-eq-pagination" class="pagination" style="display: none; margin-top: 10px;">
-                    <button class="btn btn-sm btn-secondary" onclick="changePage('db-eq', -1)">
-                        <i class="fas fa-chevron-left"></i> Anterior
-                    </button>
-                    <span class="pagination-info" id="db-eq-page-info">Página 1 de 1</span>
-                    <button class="btn btn-sm btn-secondary" onclick="changePage('db-eq', 1)">
-                        Siguiente <i class="fas fa-chevron-right"></i>
-                    </button>
-                </div>
-            </div>
-        </div>
-    </div>
-
-</div>
-
-<div id="resourceModal" class="modal">
-    <div class="modal-content">
-        <div class="modal-header">
-            <h3 style="margin:0; font-size:1.3rem;">
-                <i class="fas fa-search"></i> Seleccionar Recurso
-            </h3>
-            <span style="font-size:28px; cursor:pointer; opacity:0.8; transition:opacity 0.2s;" 
-                  onclick="closeResourceModal()" 
-                  onmouseover="this.style.opacity='1'" 
-                  onmouseout="this.style.opacity='0.8'">&times;</span>
-        </div>
-        <div class="modal-body">
-            <div style="position:relative; margin-bottom:15px;">
-                <i class="fas fa-search" style="position:absolute; left:15px; top:50%; transform:translateY(-50%); color:#718096;"></i>
-                <input type="text" id="modal-search" placeholder="Buscar insumo por descripción o código..." 
-                       onkeyup="filterModalList()" 
-                       style="width:100%; padding:12px 12px 12px 45px; font-size:0.95rem; border:2px solid var(--accent); border-radius:6px;">
-            </div>
-            <div style="height:calc(100% - 60px); overflow-y:auto; border:1px solid #e2e8f0; border-radius:6px;">
-                <table class="db-select-table" style="width:100%">
-                    <thead style="position:sticky; top:0; z-index:1; background:var(--primary);">
+            <div class="table-container" style="margin-bottom: 0; border-bottom: none; border-radius: 6px 6px 0 0;">
+                <table id="table-b1" style="min-width: 800px;">
+                    <thead>
                         <tr>
-                            <th width="15%">Nº</th>
-                            <th>Descripción</th>
-                            <th width="15%">Und.</th>
-                            <th width="20%">Precio</th>
-                            <th width="15%"></th>
-                        </tr>
-                    </thead>
-                    <tbody id="modal-list-body"></tbody>
-                </table>
-            </div>
-        </div>
-    </div>
-</div>
-
-<div id="conflictModal" class="modal" style="z-index: 2500;">
-    <div class="modal-content" style="max-width: 400px; height: auto; margin-top: 15vh;">
-        <div class="modal-header" style="background-color: var(--warning); color: #1a202c;">
-            <h3 style="margin:0; font-size:1.2rem;">
-                <i class="fas fa-exclamation-triangle"></i> Insumo Duplicado
-            </h3>
-        </div>
-        <div class="modal-body" style="text-align: center;">
-            <p id="conflict-msg" style="font-size: 1.1rem; margin-bottom: 20px;">
-                Este insumo ya existe en el APU.
-            </p>
-            <div class="conflict-options">
-                <button class="btn btn-primary" onclick="resolveConflict('replace')">
-                    <i class="fas fa-sync-alt"></i> Reemplazar
-                </button>
-                <button class="btn btn-danger" onclick="resolveConflict('discard')">
-                    <i class="fas fa-times"></i> Descartar
-                </button>
-            </div>
-            <p style="font-size: 0.85rem; color: #718096; margin-top: 15px;">
-                <b>Reemplazar:</b> Actualiza los datos (precio/unidad) del insumo existente.
-            </p>
-        </div>
-    </div>
-</div>
-
-<!-- MODAL BANCO MEJORADO CON MULTI-SELECCIÓN -->
-<div id="bankModal" class="modal">
-    <div class="modal-content">
-        <div class="modal-header">
-            <h3 style="margin:0;"><i class="fas fa-database"></i> Agregar del Banco</h3>
-            <div style="display:flex; gap:10px; align-items:center;">
-                <button id="btn-bulk-add" class="btn btn-success btn-sm" onclick="addSelectedBankItems()" style="display:none;">
-                    <i class="fas fa-plus-double"></i> Agregar Seleccionados (<span id="selected-count">0</span>)
-                </button>
-                <span style="font-size:28px; cursor:pointer" onclick="closeBankModal()">&times;</span>
-            </div>
-        </div>
-        <div class="modal-body">
-            <div style="position:relative; margin-bottom:12px;">
-                <i class="fas fa-search" style="position:absolute; left:12px; top:50%; transform:translateY(-50%); color:#718096;"></i>
-                <input type="text" id="bank-search" placeholder="Buscar actividad por nombre o código..." onkeyup="filterBankModal()" 
-                       style="width:100%; padding:10px 10px 10px 35px; border-radius:6px; border:1px solid var(--border);">
-            </div>
-            <div style="overflow-y:auto; flex-grow:1; border:1px solid #e2e8f0; border-radius:6px;">
-                <table class="db-select-table">
-                    <thead style="position:sticky; top:0; z-index:10; background:var(--primary);">
-                        <tr>
-                            <th style="width:30px"><input type="checkbox" id="bank-select-all" onclick="toggleSelectAllBank(this)"></th>
-                            <th style="width:50px">Cód</th>
+                            <th style="width:50px">Editar</th>
+                            <th style="width:35px">Nº</th>
+                            <th style="width:70px">Código</th>
                             <th>Descripción del Ítem</th>
-                            <th style="width:50px">Und.</th>
-                            <th style="width:70px">Acción</th>
+                            <th style="width:55px">Und.</th>
+                            <th style="width:80px">Cant.</th>
+                            <th style="width:80px">P.Unit</th>
+                            <th style="width:80px">Total</th>
+                            <th style="width:100px">Acciones</th>
                         </tr>
                     </thead>
-                    <tbody id="bank-modal-body"></tbody>
+                    <tbody id="b1-body"></tbody>
                 </table>
             </div>
-        </div>
-    </div>
-</div>
 
-<div id="insumosModal" class="modal">
-    <div class="modal-content" style="max-width: 95%; max-height: 95%; width: 95%; height: 95%;">
-        <div class="modal-header">
-            <h3 id="insumosModalTitle" style="margin:0; font-size:1.3rem;">
-                <i class="fas fa-list-alt"></i> <span id="modalTipoInsumo">Materiales</span> Usados en Presupuesto
-            </h3>
-            <span style="font-size:28px; cursor:pointer; opacity:0.8; transition:opacity 0.2s;" 
-                  onclick="closeInsumosModal()" 
-                  onmouseover="this.style.opacity='1'" 
-                  onmouseout="this.style.opacity='0.8'">&times;</span>
-        </div>
-        <div class="modal-body">
-            <div style="margin-bottom: 15px; display: flex; flex-wrap: wrap; gap: 8px; justify-content: space-between; align-items: center;">
-                <div style="display: flex; gap: 8px; flex-wrap: wrap;">
-                    <button class="btn btn-success btn-sm" onclick="saveSelectedInsumosToDB()">
-                        <i class="fas fa-save"></i> Guardar en Gestión
-                    </button>
-                    <button class="btn btn-warning btn-sm" onclick="exportInsumosToExcel()">
-                        <i class="fas fa-file-excel"></i> Exportar a Excel
-                    </button>
+            <div class="module-bar">
+                <div class="module-tabs-container" id="module-tabs">
+                    <!-- Las pestañas de módulos se generarán aquí -->
                 </div>
-                <div style="display: flex; gap: 8px; flex-wrap: wrap;">
-                    <button class="btn btn-info btn-sm" onclick="aplicarPreciosEditados()">
-                        <i class="fas fa-check-double"></i> Aplicar Cambios
+                <div class="module-controls">
+                    <button class="module-btn" onclick="addModule()" title="Nuevo Módulo">
+                        <i class="fas fa-plus"></i>
+                    </button>
+                    <button class="module-btn" onclick="renameCurrentModule()" title="Renombrar Módulo">
+                        <i class="fas fa-pen"></i>
+                    </button>
+                    <button class="module-btn" onclick="cloneCurrentModule()" title="Clonar Módulo">
+                        <i class="fas fa-copy"></i>
+                    </button>
+                    <button class="module-btn" onclick="deleteCurrentModule()" title="Eliminar Módulo" style="color:#e53e3e;">
+                        <i class="fas fa-trash-alt"></i>
                     </button>
                 </div>
             </div>
             
-            <div style="overflow: auto; height: calc(100% - 120px); border: 1px solid #e2e8f0; border-radius: 6px;">
-                <table style="width:100%;">
-                    <thead style="position:sticky; top:0; z-index:1; background:var(--primary);">
+            <div style="margin-top:15px; display:flex; flex-direction:column; gap:5px; align-items:flex-end;">
+                <div style="font-size:1rem; color:#4a5568; padding:10px;">
+                    Subtotal <span id="current-module-name-display" style="font-weight:600;">Módulo</span>: 
+                    <span id="module-total-display" style="font-weight:700;">0.00</span> Bs
+                </div>
+                <div style="font-size:1.3rem; font-weight:700; color:var(--primary); padding:10px; background:#f1f5f9; box-sizing: border-box; border-radius:8px; width:100%; text-align:right;">
+                    Total Presupuesto: <span id="grand-total-display">0.00</span> Bs
+                </div>
+            </div>
+
+            <div id="b1-pagination" class="pagination" style="display: none;">
+                <button class="btn btn-sm btn-secondary" onclick="changePage('b1', -1)"><i class="fas fa-chevron-left"></i> Anterior</button>
+                <span class="pagination-info" id="b1-page-info">Página 1 de 1</span>
+                <button class="btn btn-sm btn-secondary" onclick="changePage('b1', 1)">Siguiente <i class="fas fa-chevron-right"></i></button>
+            </div>
+        </div>
+
+        <div id="panel-calc" class="panel">
+            <div style="background:#fff; padding:15px; border-radius:8px; border:1px solid #e2e8f0; box-shadow: 0 2px 4px rgba(0,0,0,0.05); margin-bottom:15px;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom:15px; border-bottom:1px solid #edf2f7; padding-bottom:10px;">
+                    <h2 style="margin:0; color:var(--primary); font-size:1.3rem;">
+                        Calculadora de Materiales
+                    </h2>
+                    <button onclick="printCalcReport()" class="btn-primary" style="background-color: var(--accent); padding: 8px 16px; font-size: 0.9rem; border: none; transition: opacity 0.2s; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+                        <i class="fas fa-print"></i> Imprimir Reporte
+                    </button>
+                </div>
+                
+                <div style="display:flex; gap:12px; flex-wrap:wrap; align-items:flex-end;">
+                    
+                    <div style="flex: 2; min-width:250px; position:relative;">
+                        <label class="font-bold" style="display:block; margin-bottom:4px; color:#4a5568; font-size:0.85rem;">1. Buscar Ítem (APU):</label>
+                        <div style="position:relative;">
+                            <i class="fas fa-search" style="position:absolute; left:10px; top:50%; transform:translateY(-50%); color:#a0aec0;"></i>
+                            <input type="text" id="calc-search-input" placeholder="Escribe para buscar..." 
+                                onkeyup="searchCalcItem()" 
+                                style="padding-left:32px; width:100%; height:38px;">
+                        </div>
+                        <div id="calc-search-results" style="display:none; position:absolute; top:100%; left:0; width:100%; max-height:200px; overflow-y:auto; background:white; border:1px solid #cbd5e0; border-radius:0 0 6px 6px; z-index:100; box-shadow:0 4px 6px rgba(0,0,0,0.1);"></div>
+                    </div>
+
+                    <div style="flex: 1.5; min-width:180px; background:#ebf8ff; padding:8px 12px; border-radius:6px; border:1px solid #bee3f8; height:38px; display:flex; flex-direction:column; justify-content:center;">
+                        <div id="calc-selected-name" style="font-weight:700; color:var(--primary); font-size:0.9rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">- Seleccione ítem -</div>
+                        <div style="font-size:0.75rem;">Unidad: <span id="calc-selected-unit" style="font-weight:600;">-</span></div>
+                    </div>
+
+                    <div style="width:120px;">
+                        <label class="font-bold" style="display:block; margin-bottom:4px; color:#2f855a; font-size:0.85rem;">2. Cant. Obra:</label>
+                        <input type="text" inputmode="decimal" id="calc-quantity" value="1" 
+                                onchange="this.value = solveMathExpression(this.value); recalcCalcTable()" 
+                                onkeypress="if(event.key === 'Enter') this.blur();"
+                                style="height:38px; font-size:1.1rem; font-weight:bold; color:#2f855a; border:2px solid #48bb78; text-align:center; width:100%;">
+                    </div>
+                </div>
+            </div>
+
+            <div class="table-container" style="margin-top:0;">
+                <table id="table-calc">
+                    <thead>
                         <tr>
-                            <th width="5%" class="select-all-row">
-                                <input type="checkbox" id="selectAllInsumos" class="insumo-checkbox" onchange="toggleSelectAllInsumos(this)">
-                            </th>
-                            <th width="45%">Descripción Insumo</th>
-                            <th width="8%">Und.</th>
-                            <th width="12%">Cant.Total</th>
-                            <th width="15%">P. Unitario</th>
-                            <th width="15%">Total</th>
+                            <th style="width:40%">Descripción insu.</th>
+                            <th style="width:10%">Und.</th>
+                            <th style="width:15%">Cant-Unit.</th>
+                            <th style="width:15%">Fact/Div</th>
+                            <th style="width:20%">Requerido</th>
                         </tr>
                     </thead>
-                    <tbody id="insumosTableBody"></tbody>
+                    <tbody id="calc-body">
+                        <tr><td colspan="5" class="text-center" style="padding:20px; color:#718096;">Selecciona un ítem para calcular.</td></tr>
+                    </tbody>
                 </table>
             </div>
         </div>
-    </div>
-</div>
 
-<!-- Modal de Configuración -->
-<div id="configModal" class="modal">
-    <div class="config-modal-content">
-        <div class="config-modal-header">
-            <h3 style="margin:0; font-size:1.3rem;">
-                <i class="fas fa-cog"></i> Configuración Global
-            </h3>
-            <span style="font-size:28px; cursor:pointer; opacity:0.8; transition:opacity 0.2s;" 
-                  onclick="closeConfigModal()" 
-                  onmouseover="this.style.opacity='1'" 
-                  onmouseout="this.style.opacity='0.8'">&times;</span>
-        </div>
-        <div class="config-modal-body">
-
-            <div style="display:grid; grid-template-columns: 1fr; gap:12px;">
-                <h4 style="margin:0 0 10px 0; color:var(--purple); font-size:1rem;">
-                    <i class="fa-solid fa-money-check-dollar"></i> Parámetros de cálculo NB-SABS
-                </h4>
-                <div>
-                    <label class="font-bold">Cargas Sociales (% de MO):</label>
-                    <input type="number" id="conf-social" onchange="saveSettings()" step="0.01" min="0" style="width:100%;">
-                </div>
-                
-                <div>
-                    <label class="font-bold">IVA Mano de Obra (Factor %):</label>
-                    <input type="number" id="conf-iva-mo" onchange="saveSettings()" step="0.01" min="0" style="width:100%;">
-                </div>
-                
-                <div>
-                    <label class="font-bold">Herramientas Menores (% de Total MO):</label>
-                    <input type="number" id="conf-tools" onchange="saveSettings()" step="0.01" min="0" style="width:100%;">
-                </div>
-                <div>
-                    <label class="font-bold" style="color:var(--accent)">Gastos Generales (%):</label>
-                    <input type="number" id="conf-gg" onchange="saveSettings()" step="0.01" min="0" style="width:100%;">
-                </div>
-                
-                <div>
-                    <label class="font-bold" style="color:var(--accent)">Utilidad (%):</label>
-                    <input type="number" id="conf-util" onchange="saveSettings()" step="0.01" min="0" style="width:100%;">
-                </div>
-                
-                <div>
-                    <label class="font-bold">Impuesto a las Transacciones - IT (%):</label>
-                    <input type="number" id="conf-it" onchange="saveSettings()" step="0.01" min="0" style="width:100%;">
-                </div>
-            </div>
-
-            <hr style="border:none; height:1px; background:#e2e8f0; margin:15px 0;">
-
-            <div style="margin-bottom:15px; border-bottom:1px solid #e2e8f0; padding-bottom:10px;">
-                <h4 style="margin:0 0 10px 0; color:var(--purple); font-size:1rem;">
-                    <i class="fas fa-calculator"></i> Precisión de Decimales
-                </h4>
-                <div class="config-grid">
-                    <div class="config-item">
-                        <label>Rendimientos (Insumos)</label>
-                        <select id="conf-dec-yield" onchange="saveSettings()">
-                            <option value="2">2 decimales</option>
-                            <option value="3">3 decimales</option>
-                            <option value="4">4 decimales</option>
-                            <option value="5">5 decimales</option>
-                            <option value="6">6 decimales</option>
-                        </select>
+        <!-- PANEL BANCO CON BUSCADOR MEJORADO -->
+        <div id="panel-items" class="panel">
+            <div style="margin-bottom:20px;">
+                <h2 style="margin:0 0 12px 0; color:var(--primary); font-size:1.5rem;">Banco de Ítems</h2>
+                <div style="display:flex; gap:10px; flex-wrap:wrap; justify-content: space-between; align-items:center;">
+                    <div style="display:flex; gap:8px;">
+                        <button class="btn btn-primary" onclick="createBankItem()">
+                            <i class="fas fa-plus"></i> Crear Nuevo
+                        </button>
+                        <button class="btn btn-success" onclick="exportBankJSON()">
+                            <i class="fas fa-file-upload"></i> Exportar
+                        </button>
+                        <button class="btn btn-warning" onclick="document.getElementById('fileBank').click()">
+                            <i class="fas fa-download"></i> Importar
+                        </button>
+                        <input type="file" id="fileBank" accept=".json,application/json" style="display:none" onchange="importBankJSON(this)">
                     </div>
-                    <div class="config-item">
-                        <label>Precio Unitario (Insumos)</label>
-                        <select id="conf-dec-price" onchange="saveSettings()">
-                            <option value="2">2 decimales</option>
-                            <option value="3">3 decimales</option>
-                            <option value="4">4 decimales</option>
-                        </select>
-                    </div>
-                    <div class="config-item">
-                        <label>Parciales (Subtotales)</label>
-                        <select id="conf-dec-partial" onchange="saveSettings()">
-                            <option value="2">2 decimales</option>
-                            <option value="3">3 decimales</option>
-                            <option value="4">4 decimales</option>
-                        </select>
-                    </div>
-                    <div class="config-item">
-                        <label>Cómputos (Cant. Obra)</label>
-                        <select id="conf-dec-qty" onchange="saveSettings()">
-                            <option value="1">1 decimal</option>
-                            <option value="2">2 decimales</option>
-                            <option value="3">3 decimales</option>
-                        </select>
-                    </div>
-                    <div class="config-item config-full-width" style="background:#ebf8ff; border-color:#bee3f8;">
-                        <label style="color:var(--primary);">Total Monetario (Precio Final)</label>
-                        <select id="conf-dec-total" onchange="saveSettings()">
-                            <option value="2">2 decimales (Estándar)</option>
-                            <option value="3">3 decimales</option>
-                            <option value="4">4 decimales (Precisión Alta)</option>
-                        </select>
+                    
+                    <div style="position:relative; flex-grow:1; max-width:350px;">
+                        <i class="fas fa-search" style="position:absolute; left:12px; top:50%; transform:translateY(-50%); color:#a0aec0;"></i>
+                        <input type="text" id="main-bank-search" placeholder="Buscar en el banco..." 
+                            onkeyup="currentPage.bank=1; renderBankList()" 
+                            style="width:100%; padding:8px 8px 8px 35px; border-radius:6px; border:1px solid var(--border);">
                     </div>
                 </div>
             </div>
 
-            <label class="font-bold" style="color:var(--purple); display:block; margin-bottom:8px;">
-                <i class="fas fa-list-ol"></i> Formato de Números (Miles y Decimales):
-            </label>
-            <select id="conf-format" onchange="saveSettings()" style="margin-bottom:20px; padding:8px 12px; width:100%;">
-                <option value="intl">Internacional: 1 234.56 (Espacio / Punto)</option>
-                <option value="latam">LATAM/USA: 1,234.56 (Coma / Punto)</option>
-                <option value="euro">España/Europa: 1.234,56 (Punto / Coma)</option>
-            </select>
-
-        </div>
-    </div>
-</div>
-
-<div id="reportModal" class="modal">
-    <div class="modal-content">
-        <div class="modal-header" style="background: linear-gradient(135deg, #2b6cb0, #2c5282);">
-            <h3 style="margin:0;"><i class="fas fa-file-invoice"></i> Centro de Reportes</h3>
-            <span style="font-size:28px; cursor:pointer;" onclick="closeReportModal()">&times;</span>
-        </div>
-        <div class="modal-body">
+            <div style="margin-bottom:20px; padding:15px; background:#f0fff4; border:1px dashed #38a169; border-radius:6px;">
+                <strong><i class="fas fa-file-import"></i> Importar Excel (APUs):</strong>
+                <div style="margin-top:8px; display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
+                    <input type="file" id="fileComplexAPU" accept=".xlsx,.csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel,text/csv" style="display:none" onchange="importComplexAPUReport(this)">
+                    <button class="btn btn-success btn-sm" onclick="document.getElementById('fileComplexAPU').click()">
+                        <i class="fas fa-file-excel"></i> Seleccionar Archivo
+                    </button>
+                    <span style="font-size:0.8rem; color:#4a5568;">Formato: Excel con columnas claras</span>
+                </div>
+            </div>
             
-            <div style="margin-bottom: 20px;">
-                <label style="font-weight: bold; display: block; margin-bottom: 6px; color: var(--secondary);">
-                    <i class="fas fa-pen"></i> Nombre del Proyecto:
+            <div class="table-container">
+                <table id="table-bank" style="min-width: 650px;">
+                    <thead>
+                        <tr>
+                            <th style="width:35px" title="Agregar al presupuesto">aPresu</th>
+                            <th style="width:35px">Cód</th>
+                            <th>Descripción</th>
+                            <th style="width:35px">Und.</th>
+                            <th style="width:80px">Precio Ref.</th>
+                            <th style="width:80px">Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody id="bank-body"></tbody>
+                </table>
+            </div>
+            
+            <!-- Paginación para Banco -->
+            <div id="bank-pagination" class="pagination" style="display: none;">
+                <button class="btn btn-sm btn-secondary" onclick="changePage('bank', -1)">
+                    <i class="fas fa-chevron-left"></i> Anterior
+                </button>
+                <span class="pagination-info" id="bank-page-info">Página 1 de 1</span>
+                <button class="btn btn-sm btn-secondary" onclick="changePage('bank', 1)">
+                    Siguiente <i class="fas fa-chevron-right"></i>
+                </button>
+            </div>
+        </div>
+
+        <div id="panel-editor" class="panel">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px; border-bottom:2px solid var(--accent); padding-bottom:12px;">
+                <h3 style="margin:0; color:var(--accent); font-size:1.3rem;" id="editor-title">Editar APU</h3>
+                <div style="display:flex; gap:8px;">
+                    <!-- Botones de navegación movidos aquí, al lado del botón Descartar -->
+                    <button class="btn btn-warning btn-sm" onclick="navigateEditor(-1)" title="Anterior (Ctrl+←)" style="width: 30px;">
+                        <i class="fas fa-chevron-left"></i>
+                    </button>
+                    <button class="btn btn-warning btn-sm" onclick="navigateEditor(1)" title="Siguiente (Ctrl+→)" style="width: 30px;">
+                        <i class="fas fa-chevron-right"></i>
+                    </button>
+
+                    <button class="btn btn-secondary" onclick="discardEditor()"> Descartar
+                    </button>
+                    <button class="btn btn-success" onclick="closeEditor()"> Guardar
+                    </button>
+                </div>
+            </div>
+
+            <div class="apu-header-grid">
+                <div>
+                    <label class="font-bold">Descripción:</label> 
+                    <input type="text" id="apu-desc" onchange="updateEditorMeta()" placeholder="Descripción del ítem">
+                </div>
+                <div style="display:grid; grid-template-columns: 1fr 1fr; gap:12px;">
+                    <div>
+                        <label class="font-bold">Unidad:</label> 
+                        <input type="text" id="apu-unit" onchange="updateEditorMeta()" placeholder="Ej: m3, glb">
+                    </div>
+                    <div>
+                        <label class="font-bold">Cantidad:</label> 
+                        <input type="number" id="apu-qty" onchange="updateEditorMeta()" step="0.01" min="0">
+                    </div>
+                </div>
+            </div>
+
+            <div class="apu-body-grid">
+                <div class="apu-details">
+                    <div class="resource-group">
+                        <div class="group-header">
+                            <span><i class="fas fa-box"></i> Materiales</span>
+                            <div style="display:flex; gap:5px;"> <button class="btn btn-success btn-sm" onclick="quickCreateResource('materiales')" title="Crear Nuevo y Añadir">
+                                    <i class="fas fa-magic"></i> Crear
+                                </button>
+                                <button class="btn btn-primary btn-sm" onclick="openResourceModal('materiales')">
+                                    <i class="fas fa-plus"></i> Añadir
+                                </button>
+                            </div>
+                        </div>
+                        <div class="editor-table-container">
+                            <table id="table-mat">
+                                <thead>
+                                    <tr>
+                                        <th>Descripción</th>
+                                        <th>Und.</th>
+                                        <th>Rend.</th>
+                                        <th>Precio</th>
+                                        <th>Total</th>
+                                        <th></th>
+                                    </tr>
+                                </thead>
+                                <tbody></tbody>
+                            </table>
+                        </div>
+                        <div class="text-right font-bold" style="padding:10px; background:#f8fafc; border-top:1px solid #e2e8f0;">
+                            Subtotal: <span id="sub-mat">0.00</span>
+                        </div>
+                    </div>
+
+                    <div class="resource-group">
+                        <div class="group-header">
+                            <span><i class="fas fa-users"></i> Mano de Obra</span>
+                            <div style="display:flex; gap:5px;">
+                                <button class="btn btn-success btn-sm" onclick="quickCreateResource('mano_obra')" title="Crear Nuevo y Añadir">
+                                    <i class="fas fa-magic"></i> Crear
+                                </button>
+                                <button class="btn btn-primary btn-sm" onclick="openResourceModal('mano_obra')">
+                                    <i class="fas fa-plus"></i> Añadir
+                                </button>
+                            </div>
+                        </div>
+                        <div class="editor-table-container">
+                            <table id="table-mo">
+                                <thead>
+                                    <tr>
+                                        <th>Descripción</th>
+                                        <th>Und.</th>
+                                        <th>Hrs</th>
+                                        <th>Jornal</th>
+                                        <th>Total</th>
+                                        <th></th>
+                                    </tr>
+                                </thead>
+                                <tbody></tbody>
+                            </table>
+                        </div>
+                        <div style="padding:12px; background:#fff; font-size:0.85rem;">
+                            <div class="total-row"><span>Subtotal MO:</span> <span id="mo-basic">0.00</span></div>
+                            <div class="total-row" style="color:var(--accent)">
+                                <span>(+) Cargas Soc. (<span id="lbl-soc"></span>%):</span> 
+                                <span id="mo-soc">0.00</span>
+                            </div>
+                            <div class="total-row" style="color:var(--accent)">
+                                <span>(+) IVA MO (<span id="lbl-iva"></span>%):</span> 
+                                <span id="mo-iva">0.00</span>
+                            </div>
+                            <div class="text-right font-bold" style="margin-top:8px; padding-top:8px; border-top:2px solid #e2e8f0;">
+                                Total Mano de Obra: <span id="sub-mo">0.00</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="resource-group">
+                        <div class="group-header">
+                            <span><i class="fas fa-tools"></i> Equipos</span>
+                            <div style="display:flex; gap:5px;">
+                                <button class="btn btn-success btn-sm" onclick="quickCreateResource('equipos')" title="Crear Nuevo y Añadir">
+                                    <i class="fas fa-magic"></i> Crear
+                                </button>
+                                <button class="btn btn-primary btn-sm" onclick="openResourceModal('equipos')">
+                                    <i class="fas fa-plus"></i> Añadir
+                                </button>
+                            </div>
+                        </div>
+                        <div class="editor-table-container">
+                            <table id="table-eq">
+                                <thead>
+                                    <tr>
+                                        <th>Descripción</th>
+                                        <th>Und.</th>
+                                        <th>Rend.</th>
+                                        <th>Tarifa</th>
+                                        <th>Total</th>
+                                        <th></th>
+                                    </tr>
+                                </thead>
+                                <tbody></tbody>
+                                <tfoot id="eq-tools-row"></tfoot>
+                            </table>
+                        </div>
+                        <div class="text-right font-bold" style="padding:10px; background:#f8fafc; border-top:1px solid #e2e8f0;">
+                            Total Equipo: <span id="sub-eq">0.00</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div>
+                    <div class="totals-card">
+                        <h4 style="margin-top:0; border-bottom:1px solid #cbd5e0; padding-bottom:8px; color:var(--primary);">
+                            <i class="fas fa-calculator"></i> Resumen
+                        </h4>
+                        
+                        <div class="total-row"><span>Costo Directo:</span> <strong id="sum-direct">0.00</strong></div>
+                        <div class="total-row"><span>Gastos Grales (<span id="lbl-gg"></span>%):</span> <span id="sum-gg">0.00</span></div>
+                        <div class="total-row"><span>Utilidad (<span id="lbl-util"></span>%):</span> <span id="sum-util">0.00</span></div>
+                        <div class="total-row"><span>Impuesto IT (<span id="lbl-it"></span>%):</span> <span id="sum-it">0.00</span></div>
+                        
+                        <div class="total-final">
+                            <span>P. UNITARIO:</span>
+                            <span id="final-price">0.00</span>
+                        </div>
+                        
+                        <div style="margin-top:15px; font-size:0.8rem; color:#718096; text-align:center;">
+                            <i class="fas fa-info-circle"></i> Precio calculado automáticamente
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div id="panel-db" class="panel">
+            <div style="margin-bottom:20px;">
+                <h2 style="margin:0 0 12px 0; color:var(--primary); font-size:1.5rem;">Gestión de Insumos</h2>
+                <div style="background:#fff; padding:15px; border:1px solid #e2e8f0; border-radius:6px; display: flex; flex-wrap: wrap; gap: 8px; align-items: center; box-shadow: 0 1px 3px rgba(0,0,0,0.05);">
+                    <strong style="color:var(--primary);"><i class="fas fa-file-upload"></i> Carga Masiva:</strong>
+                    <input type="file" id="dbFile" accept=".xlsx,.csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel,text/csv" style="flex-grow: 1; max-width: 200px;">
+                    <select id="dbImportType" style="padding: 7px 10px; border-radius:4px; border:1px solid #cbd5e0;">
+                        <option value="materiales">Materiales</option>
+                        <option value="mano_obra">Mano de Obra</option>
+                        <option value="equipos">Equipos</option>
+                    </select>
+                    <button class="btn btn-warning btn-sm" onclick="importDBFromExcel()">
+                        <i class="fas fa-upload"></i> Subir
+                    </button>
+                    <button class="btn btn-purple btn-sm" onclick="cleanAndMergeDuplicates()" title="Fusionar descripciones idénticas">
+                        <i class="fas fa-broom"></i> Unificar
+                    </button>
+                    <button class="btn btn-info btn-sm" onclick="syncDbToBank()" title="Actualizar precios del Banco con los de esta lista">
+                        <i class="fas fa-sync"></i> Sincronizar Banco
+                    </button>
+                </div>
+                <p style="font-size: 0.8rem; color: #718096; margin-top: 8px;">
+                    <i class="fas fa-sort"></i> Toca los títulos para ordenar. La numeración se auto-ajusta (1, 2, 3...) según el orden.
+                </p>
+            </div>
+
+            <div class="db-grid-container">
+                <div>
+                    <div class="group-header" style="background:var(--primary); color:white">
+                        <i class="fas fa-box"></i> MATERIALES 
+                        <button class="btn btn-success btn-sm" onclick="addDbRow('materiales')">
+                            <i class="fas fa-plus"></i>
+                        </button>
+                    </div>
+                    <div class="table-container" style="max-height:450px; overflow-y:auto">
+                        <table id="db-table-materiales" class="db-table">
+                            <thead>
+                                <tr>
+                                    <th class="col-code" onclick="toggleDbSort('materiales', 'code')">Nº <i class="fas fa-sort sort-icon"></i></th>
+                                    <th class="col-desc" onclick="toggleDbSort('materiales', 'desc')">Descripción <i class="fas fa-sort sort-icon"></i></th>
+                                    <th class="col-unit">Und.</th>
+                                    <th class="col-price">Precio</th>
+                                    <th class="col-action"></th>
+                                </tr>
+                            </thead>
+                            <tbody></tbody>
+                        </table>
+                    </div>
+                    <!-- Paginación para Materiales -->
+                    <div id="db-mat-pagination" class="pagination" style="display: none; margin-top: 10px;">
+                        <button class="btn btn-sm btn-secondary" onclick="changePage('db-mat', -1)">
+                            <i class="fas fa-chevron-left"></i> Anterior
+                        </button>
+                        <span class="pagination-info" id="db-mat-page-info">Página 1 de 1</span>
+                        <button class="btn btn-sm btn-secondary" onclick="changePage('db-mat', 1)">
+                            Siguiente <i class="fas fa-chevron-right"></i>
+                        </button>
+                    </div>
+                </div>
+                <div>
+                    <div class="group-header" style="background:var(--primary); color:white">
+                        <i class="fas fa-users"></i> MANO DE OBRA 
+                        <button class="btn btn-success btn-sm" onclick="addDbRow('mano_obra')">
+                            <i class="fas fa-plus"></i>
+                        </button>
+                    </div>
+                    <div class="table-container" style="max-height:450px; overflow-y:auto">
+                        <table id="db-table-mano_obra" class="db-table">
+                            <thead>
+                                <tr>
+                                    <th class="col-code" onclick="toggleDbSort('mano_obra', 'code')">Nº <i class="fas fa-sort sort-icon"></i></th>
+                                    <th class="col-desc" onclick="toggleDbSort('mano_obra', 'desc')">Descripción <i class="fas fa-sort sort-icon"></i></th>
+                                    <th class="col-unit">Und.</th>
+                                    <th class="col-price">Jornal</th>
+                                    <th class="col-action"></th>
+                                </tr>
+                            </thead>
+                            <tbody></tbody>
+                        </table>
+                    </div>
+                    <!-- Paginación para Mano de Obra -->
+                    <div id="db-mo-pagination" class="pagination" style="display: none; margin-top: 10px;">
+                        <button class="btn btn-sm btn-secondary" onclick="changePage('db-mo', -1)">
+                            <i class="fas fa-chevron-left"></i> Anterior
+                        </button>
+                        <span class="pagination-info" id="db-mo-page-info">Página 1 de 1</span>
+                        <button class="btn btn-sm btn-secondary" onclick="changePage('db-mo', 1)">
+                            Siguiente <i class="fas fa-chevron-right"></i>
+                        </button>
+                    </div>
+                </div>
+                <div>
+                    <div class="group-header" style="background:var(--primary); color:white">
+                        <i class="fas fa-tools"></i> EQUIPOS 
+                        <button class="btn btn-success btn-sm" onclick="addDbRow('equipos')">
+                            <i class="fas fa-plus"></i>
+                        </button>
+                    </div>
+                    <div class="table-container" style="max-height:450px; overflow-y:auto">
+                        <table id="db-table-equipos" class="db-table">
+                            <thead>
+                                <tr>
+                                    <th class="col-code" onclick="toggleDbSort('equipos', 'code')">Nº <i class="fas fa-sort sort-icon"></i></th>
+                                    <th class="col-desc" onclick="toggleDbSort('equipos', 'desc')">Descripción <i class="fas fa-sort sort-icon"></i></th>
+                                    <th class="col-unit">Und.</th>
+                                    <th class="col-price">Tarifa</th>
+                                    <th class="col-action"></th>
+                                </tr>
+                            </thead>
+                            <tbody></tbody>
+                        </table>
+                    </div>
+                    <!-- Paginación para Equipos -->
+                    <div id="db-eq-pagination" class="pagination" style="display: none; margin-top: 10px;">
+                        <button class="btn btn-sm btn-secondary" onclick="changePage('db-eq', -1)">
+                            <i class="fas fa-chevron-left"></i> Anterior
+                        </button>
+                        <span class="pagination-info" id="db-eq-page-info">Página 1 de 1</span>
+                        <button class="btn btn-sm btn-secondary" onclick="changePage('db-eq', 1)">
+                            Siguiente <i class="fas fa-chevron-right"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <div id="resourceModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 style="margin:0; font-size:1.3rem;">
+                    <i class="fas fa-search"></i> Seleccionar Recurso
+                </h3>
+                <span style="font-size:28px; cursor:pointer; opacity:0.8; transition:opacity 0.2s;" 
+                    onclick="closeResourceModal()" 
+                    onmouseover="this.style.opacity='1'" 
+                    onmouseout="this.style.opacity='0.8'">&times;</span>
+            </div>
+            <div class="modal-body">
+                <div style="position:relative; margin-bottom:15px;">
+                    <i class="fas fa-search" style="position:absolute; left:15px; top:50%; transform:translateY(-50%); color:#718096;"></i>
+                    <input type="text" id="modal-search" placeholder="Buscar insumo por descripción o código..." 
+                        onkeyup="filterModalList()" 
+                        style="width:100%; padding:12px 12px 12px 45px; font-size:0.95rem; border:2px solid var(--accent); border-radius:6px;">
+                </div>
+                <div style="height:calc(100% - 60px); overflow-y:auto; border:1px solid #e2e8f0; border-radius:6px;">
+                    <table class="db-select-table" style="width:100%">
+                        <thead style="position:sticky; top:0; z-index:1; background:var(--primary);">
+                            <tr>
+                                <th width="15%">Nº</th>
+                                <th>Descripción</th>
+                                <th width="15%">Und.</th>
+                                <th width="20%">Precio</th>
+                                <th width="15%"></th>
+                            </tr>
+                        </thead>
+                        <tbody id="modal-list-body"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="conflictModal" class="modal" style="z-index: 2500;">
+        <div class="modal-content" style="max-width: 400px; height: auto; margin-top: 15vh;">
+            <div class="modal-header" style="background-color: var(--warning); color: #1a202c;">
+                <h3 style="margin:0; font-size:1.2rem;">
+                    <i class="fas fa-exclamation-triangle"></i> Insumo Duplicado
+                </h3>
+            </div>
+            <div class="modal-body" style="text-align: center;">
+                <p id="conflict-msg" style="font-size: 1.1rem; margin-bottom: 20px;">
+                    Este insumo ya existe en el APU.
+                </p>
+                <div class="conflict-options">
+                    <button class="btn btn-primary" onclick="resolveConflict('replace')">
+                        <i class="fas fa-sync-alt"></i> Reemplazar
+                    </button>
+                    <button class="btn btn-danger" onclick="resolveConflict('discard')">
+                        <i class="fas fa-times"></i> Descartar
+                    </button>
+                </div>
+                <p style="font-size: 0.85rem; color: #718096; margin-top: 15px;">
+                    <b>Reemplazar:</b> Actualiza los datos (precio/unidad) del insumo existente.
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL BANCO MEJORADO CON MULTI-SELECCIÓN -->
+    <div id="bankModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 style="margin:0;"><i class="fas fa-database"></i> Agregar del Banco</h3>
+                <div style="display:flex; gap:10px; align-items:center;">
+                    <button id="btn-bulk-add" class="btn btn-success btn-sm" onclick="addSelectedBankItems()" style="display:none;">
+                        <i class="fas fa-plus-double"></i> Agregar Seleccionados (<span id="selected-count">0</span>)
+                    </button>
+                    <span style="font-size:28px; cursor:pointer" onclick="closeBankModal()">&times;</span>
+                </div>
+            </div>
+            <div class="modal-body">
+                <div style="position:relative; margin-bottom:12px;">
+                    <i class="fas fa-search" style="position:absolute; left:12px; top:50%; transform:translateY(-50%); color:#718096;"></i>
+                    <input type="text" id="bank-search" placeholder="Buscar actividad por nombre o código..." onkeyup="filterBankModal()" 
+                        style="width:100%; padding:10px 10px 10px 35px; border-radius:6px; border:1px solid var(--border);">
+                </div>
+                <div style="overflow-y:auto; flex-grow:1; border:1px solid #e2e8f0; border-radius:6px;">
+                    <table class="db-select-table">
+                        <thead style="position:sticky; top:0; z-index:10; background:var(--primary);">
+                            <tr>
+                                <th style="width:30px"><input type="checkbox" id="bank-select-all" onclick="toggleSelectAllBank(this)"></th>
+                                <th style="width:50px">Cód</th>
+                                <th>Descripción del Ítem</th>
+                                <th style="width:50px">Und.</th>
+                                <th style="width:70px">Acción</th>
+                            </tr>
+                        </thead>
+                        <tbody id="bank-modal-body"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="insumosModal" class="modal">
+        <div class="modal-content" style="max-width: 95%; max-height: 95%; width: 95%; height: 95%;">
+            <div class="modal-header">
+                <h3 id="insumosModalTitle" style="margin:0; font-size:1.3rem;">
+                    <i class="fas fa-list-alt"></i> <span id="modalTipoInsumo">Materiales</span> Usados en Presupuesto
+                </h3>
+                <span style="font-size:28px; cursor:pointer; opacity:0.8; transition:opacity 0.2s;" 
+                    onclick="closeInsumosModal()" 
+                    onmouseover="this.style.opacity='1'" 
+                    onmouseout="this.style.opacity='0.8'">&times;</span>
+            </div>
+            <div class="modal-body">
+                <div style="margin-bottom: 15px; display: flex; flex-wrap: wrap; gap: 8px; justify-content: space-between; align-items: center;">
+                    <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+                        <button class="btn btn-success btn-sm" onclick="saveSelectedInsumosToDB()">
+                            <i class="fas fa-save"></i> Guardar en Gestión
+                        </button>
+                        <button class="btn btn-warning btn-sm" onclick="exportInsumosToExcel()">
+                            <i class="fas fa-file-excel"></i> Exportar a Excel
+                        </button>
+                    </div>
+                    <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+                        <button class="btn btn-info btn-sm" onclick="aplicarPreciosEditados()">
+                            <i class="fas fa-check-double"></i> Aplicar Cambios
+                        </button>
+                    </div>
+                </div>
+                
+                <div style="overflow: auto; height: calc(100% - 120px); border: 1px solid #e2e8f0; border-radius: 6px;">
+                    <table style="width:100%;">
+                        <thead style="position:sticky; top:0; z-index:1; background:var(--primary);">
+                            <tr>
+                                <th width="5%" class="select-all-row">
+                                    <input type="checkbox" id="selectAllInsumos" class="insumo-checkbox" onchange="toggleSelectAllInsumos(this)">
+                                </th>
+                                <th width="45%">Descripción Insumo</th>
+                                <th width="8%">Und.</th>
+                                <th width="12%">Cant.Total</th>
+                                <th width="15%">P. Unitario</th>
+                                <th width="15%">Total</th>
+                            </tr>
+                        </thead>
+                        <tbody id="insumosTableBody"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal de Configuración -->
+    <div id="configModal" class="modal">
+        <div class="config-modal-content">
+            <div class="config-modal-header">
+                <h3 style="margin:0; font-size:1.3rem;">
+                    <i class="fas fa-cog"></i> Configuración Global
+                </h3>
+                <span style="font-size:28px; cursor:pointer; opacity:0.8; transition:opacity 0.2s;" 
+                    onclick="closeConfigModal()" 
+                    onmouseover="this.style.opacity='1'" 
+                    onmouseout="this.style.opacity='0.8'">&times;</span>
+            </div>
+            <div class="config-modal-body">
+
+                <label class="font-bold" style="color:var(--purple); display:block; margin-bottom:8px;">
+                    <i class="fas fa-list-ol"></i> Formato de Números (Miles y Decimales):
                 </label>
-                <input type="text" id="reportProjectName" placeholder="Escribe el nombre del proyecto..." 
-                       style="width: 100%; padding: 10px; border: 2px solid #cbd5e0; border-radius: 6px; font-size: 1rem; transition: border 0.3s;">
-            </div>
+                <select id="conf-format" onchange="saveSettings()" style="margin-bottom:20px; padding:8px 12px; width:100%;">
+                    <option value="intl">Internacional: 1 234.56 (Espacio / Punto)</option>
+                    <option value="latam">LATAM/USA: 1,234.56 (Coma / Punto)</option>
+                    <option value="euro">España/Europa: 1.234,56 (Punto / Coma)</option>
+                </select>
 
-            <div style="margin-bottom: 25px; text-align: center;">
-                <label style="font-weight: bold; display: block; margin-bottom: 10px; color: var(--secondary);">Formato de Salida:</label>
-                <div class="format-selector">
-                    <label class="format-option active" onclick="setReportFormat('pdf')">
-                        <input type="radio" name="repFormat" value="pdf" checked hidden>
-                        <i class="fas fa-file-pdf"></i> PDF
-                    </label>
-                    <label class="format-option" onclick="setReportFormat('excel')">
-                        <input type="radio" name="repFormat" value="excel" hidden>
-                        <i class="fas fa-file-excel"></i> Excel
-                    </label>
+                <div style="margin-bottom:15px; border-bottom:1px solid #e2e8f0; padding-bottom:10px;">
+                    <h4 style="margin:0 0 10px 0; color:var(--purple); font-size:1rem;">
+                        <i class="fas fa-calculator"></i> Precisión de Decimales
+                    </h4>
+                    <div class="config-grid">
+                        <div class="config-item">
+                            <label>Rendimientos (Insumos)</label>
+                            <select id="conf-dec-yield" onchange="saveSettings()">
+                                <option value="2">2 decimales</option>
+                                <option value="3">3 decimales</option>
+                                <option value="4">4 decimales</option>
+                                <option value="5">5 decimales</option>
+                                <option value="6">6 decimales</option>
+                            </select>
+                        </div>
+                        <div class="config-item">
+                            <label>Precio Unitario (Insumos)</label>
+                            <select id="conf-dec-price" onchange="saveSettings()">
+                                <option value="2">2 decimales</option>
+                                <option value="3">3 decimales</option>
+                                <option value="4">4 decimales</option>
+                                <option value="5">5 decimales</option> 
+                            </select>
+                        </div>
+                        <div class="config-item">
+                            <label>Parciales (Subtotales)</label>
+                            <select id="conf-dec-partial" onchange="saveSettings()">
+                                <option value="2">2 decimales</option>
+                                <option value="3">3 decimales</option>
+                                <option value="4">4 decimales</option>
+                                <option value="5">5 decimales</option>
+                            </select>
+                        </div>
+                        <div class="config-item">
+                            <label>Cómputos (Cant. Obra)</label>
+                            <select id="conf-dec-qty" onchange="saveSettings()">
+                                <option value="1">1 decimal</option>
+                                <option value="2">2 decimales</option>
+                                <option value="3">3 decimales</option>
+                            </select>
+                        </div>
+                        <div class="config-item config-full-width" style="background:#ebf8ff; border-color:#bee3f8;">
+                            <label style="color:var(--primary);">Total Monetario (Precio Final)</label>
+                            <select id="conf-dec-total" onchange="saveSettings()">
+                                <option value="2">2 decimales (Estándar)</option>
+                                <option value="3">3 decimales</option>
+                                <option value="4">4 decimales (Precisión Alta)</option>
+                                <option value="5">5 decimales (Precisión Muy Alta)</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+                <div style="display:grid; grid-template-columns: 1fr; gap:5px;">
+                    <h4 style="margin:0 0 10px 0; color:var(--purple); font-size:1rem;">
+                        <i class="fa-solid fa-money-check-dollar"></i> Parámetros de cálculo NB-SABS
+                    </h4>
+                    <div>
+                        <label class="font-bold">Cargas Sociales (% de MO):</label>
+                        <input type="number" id="conf-social" onchange="saveSettings()" step="0.01" min="0" style="width:100%;">
+                    </div>
+                    
+                    <div>
+                        <label class="font-bold">IVA Mano de Obra (Factor %):</label>
+                        <input type="number" id="conf-iva-mo" onchange="saveSettings()" step="0.01" min="0" style="width:100%;">
+                    </div>
+                    
+                    <div>
+                        <label class="font-bold">Herramientas Menores (% de Total MO):</label>
+                        <input type="number" id="conf-tools" onchange="saveSettings()" step="0.01" min="0" style="width:100%;">
+                    </div>
+                    <div>
+                        <label class="font-bold" style="color:var(--accent)">Gastos Generales (%):</label>
+                        <input type="number" id="conf-gg" onchange="saveSettings()" step="0.01" min="0" style="width:100%;">
+                    </div>
+                    
+                    <div>
+                        <label class="font-bold" style="color:var(--accent)">Utilidad (%):</label>
+                        <input type="number" id="conf-util" onchange="saveSettings()" step="0.01" min="0" style="width:100%;">
+                    </div>
+                    
+                    <div>
+                        <label class="font-bold">Impuesto a las Transacciones - IT (%):</label>
+                        <input type="number" id="conf-it" onchange="saveSettings()" step="0.01" min="0" style="width:100%;">
+                    </div>
                 </div>
             </div>
+        </div>
+    </div>
 
-            <label style="font-weight: bold; display: block; margin-bottom: 15px; color: var(--secondary); text-align: center;">Reportes Disponibles:</label>
-
-            <div class="report-grid">
-                <button class="btn-report" onclick="generateSelectedReport('pg')">
-                    <i class="fas fa-list-alt"></i>
-                    <span>Formulario B-1 (PG)</span>
-                </button>
+    <div id="reportModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header" style="background: linear-gradient(135deg, #2b6cb0, #2c5282);">
+                <h3 style="margin:0;"><i class="fas fa-file-invoice"></i> Centro de Reportes</h3>
+                <span style="font-size:28px; cursor:pointer;" onclick="closeReportModal()">&times;</span>
+            </div>
+            <div class="modal-body">
                 
-                <button class="btn-report" onclick="generateSelectedReport('apu')">
-                    <i class="fas fa-calculator"></i>
-                    <span>Formulario B-2 (APUs)</span>
-                </button>
+                <div style="margin-bottom: 20px;">
+                    <label style="font-weight: bold; display: block; margin-bottom: 6px; color: var(--secondary);">
+                        <i class="fas fa-pen"></i> Nombre del Proyecto:
+                    </label>
+                    <input type="text" id="reportProjectName" placeholder="Escribe el nombre del proyecto..." 
+                        style="width: 100%; padding: 10px; border: 2px solid #cbd5e0; border-radius: 6px; font-size: 1rem; transition: border 0.3s;">
+                </div>
 
-                <button class="btn-report" onclick="generateSelectedReport('materiales')">
-                    <i class="fas fa-box"></i>
-                    <span>Insumos: Materiales</span>
-                </button>
+                <div style="margin-bottom: 25px; text-align: center;">
+                    <label style="font-weight: bold; display: block; margin-bottom: 10px; color: var(--secondary);">Formato de Salida:</label>
+                    <div class="format-selector">
+                        <label class="format-option active" onclick="setReportFormat('pdf')">
+                            <input type="radio" name="repFormat" value="pdf" checked hidden>
+                            <i class="fas fa-file-pdf"></i> PDF
+                        </label>
+                        <label class="format-option" onclick="setReportFormat('excel')">
+                            <input type="radio" name="repFormat" value="excel" hidden>
+                            <i class="fas fa-file-excel"></i> Excel
+                        </label>
+                    </div>
+                </div>
 
-                <button class="btn-report" onclick="generateSelectedReport('mano_obra')">
-                    <i class="fas fa-users"></i>
-                    <span>Insumos: Mano de Obra</span>
-                </button>
+                <label style="font-weight: bold; display: block; margin-bottom: 15px; color: var(--secondary); text-align: center;">Reportes Disponibles:</label>
 
-                <button class="btn-report" onclick="generateSelectedReport('equipos')">
-                    <i class="fas fa-truck-monster"></i>
-                    <span>Insumos: Maquinaria</span>
-                </button>
+                <div class="report-grid">
+                    <button class="btn-report" onclick="generateSelectedReport('pg')">
+                        <i class="fas fa-list-alt"></i>
+                        <span>Formulario B-1 (PG)</span>
+                    </button>
+                    
+                    <button class="btn-report" onclick="generateSelectedReport('apu')">
+                        <i class="fas fa-calculator"></i>
+                        <span>Formulario B-2 (APUs)</span>
+                    </button>
 
-                <button class="btn-report" style="font-weight: bold; font-size: 1.1em;" onclick="generateSelectedReport('masivo')">
-                    <i class="fas fa-folder-open"></i>
-                    <span>EXPORTACIÓN MASIVA COMPLETA</span>
-                </button>
+                    <button class="btn-report" onclick="generateSelectedReport('materiales')">
+                        <i class="fas fa-box"></i>
+                        <span>Insumos: Materiales</span>
+                    </button>
+
+                    <button class="btn-report" onclick="generateSelectedReport('mano_obra')">
+                        <i class="fas fa-users"></i>
+                        <span>Insumos: Mano de Obra</span>
+                    </button>
+
+                    <button class="btn-report" onclick="generateSelectedReport('equipos')">
+                        <i class="fas fa-truck-monster"></i>
+                        <span>Insumos: Maquinaria</span>
+                    </button>
+
+                    <button class="btn-report" style="font-weight: bold; font-size: 1.1em;" onclick="generateSelectedReport('masivo')">
+                        <i class="fas fa-folder-open"></i>
+                        <span>EXPORTACIÓN MASIVA COMPLETA</span>
+                    </button>
+                </div>
             </div>
         </div>
     </div>
-</div>
 
-<div id="saveOptionsModal" class="modal" style="z-index: 3100;">
-    <div class="modal-content" style="max-width: 350px; height: auto; margin-top: 20vh;">
-        <div class="modal-header" style="background: var(--success); color: white;">
-            <h3 style="margin:0; font-size:1.1rem;"><i class="fas fa-save"></i> Opciones de Guardado</h3>
-            <span style="font-size:24px; cursor:pointer;" onclick="document.getElementById('saveOptionsModal').style.display='none'">&times;</span>
-        </div>
-        <div class="modal-body" style="padding: 20px; text-align: center;">
-            <p style="color: #4a5568; margin-bottom: 20px;">¿Qué deseas exportar a archivo?</p>
-            
-            <button class="btn btn-success" style="width: 100%; margin-bottom: 10px; justify-content: flex-start;" onclick="exportProjectJSON(); document.getElementById('saveOptionsModal').style.display='none'">
-                <i class="fas fa-archive"></i> <strong>Proyecto Completo</strong>
-                <span style="font-size: 0.8em; margin-left: auto; opacity: 0.8;">(Todo)</span>
-            </button>
-            
-            <button class="btn btn-info" style="width: 100%; justify-content: flex-start;" onclick="exportBudgetOnlyJSON(); document.getElementById('saveOptionsModal').style.display='none'">
-                <i class="fas fa-file-contract"></i> <strong>Solo Presupuesto</strong>
-                <span style="font-size: 0.8em; margin-left: auto; opacity: 0.8;">(Items B1)</span>
-            </button>
-            
-            <p style="font-size: 0.75rem; color: #a0aec0; margin-top: 15px;">
-                "Solo Presupuesto" exporta los ítems y configuración, excluyendo el Banco y la Base de Insumos global.
-            </p>
+    <div id="saveOptionsModal" class="modal" style="z-index: 3100;">
+        <div class="modal-content" style="max-width: 350px; height: auto; margin-top: 20vh;">
+            <div class="modal-header" style="background: var(--success); color: white;">
+                <h3 style="margin:0; font-size:1.1rem;"><i class="fas fa-save"></i> Opciones de Guardado</h3>
+                <span style="font-size:24px; cursor:pointer;" onclick="document.getElementById('saveOptionsModal').style.display='none'">&times;</span>
+            </div>
+            <div class="modal-body" style="padding: 20px; text-align: center;">
+                <p style="color: #4a5568; margin-bottom: 20px;">¿Qué deseas exportar a archivo?</p>
+                
+                <button class="btn btn-success" style="width: 100%; margin-bottom: 10px; justify-content: flex-start;" onclick="exportProjectJSON(); document.getElementById('saveOptionsModal').style.display='none'">
+                    <i class="fas fa-archive"></i> <strong>Proyecto Completo</strong>
+                    <span style="font-size: 0.8em; margin-left: auto; opacity: 0.8;">(Todo)</span>
+                </button>
+                
+                <button class="btn btn-info" style="width: 100%; justify-content: flex-start;" onclick="exportBudgetOnlyJSON(); document.getElementById('saveOptionsModal').style.display='none'">
+                    <i class="fas fa-file-contract"></i> <strong>Solo Presupuesto</strong>
+                    <span style="font-size: 0.8em; margin-left: auto; opacity: 0.8;">(Items B1)</span>
+                </button>
+                
+                <p style="font-size: 0.75rem; color: #a0aec0; margin-top: 15px;">
+                    "Solo Presupuesto" exporta los ítems y configuración, excluyendo el Banco y la Base de Insumos global.
+                </p>
+            </div>
         </div>
     </div>
-</div>
+
+    <div id="deleteOptionsModal" class="modal" style="z-index: 3200;">
+        <div class="modal-content" style="max-width: 350px; height: auto; margin-top: 20vh;">
+            <div class="modal-header" style="background: var(--danger); color: white;">
+                <h3 style="margin:0; font-size:1.1rem;"><i class="fas fa-trash-alt"></i> Opciones de Borrado</h3>
+                <span style="font-size:24px; cursor:pointer;" onclick="closeDeleteModal()">&times;</span>
+            </div>
+            <div class="modal-body" style="padding: 20px; text-align: center;">
+                <p style="color: #4a5568; margin-bottom: 20px;">¿Qué deseas eliminar?</p>
+                
+                <button class="btn btn-warning" style="width: 100%; margin-bottom: 10px; justify-content: flex-start;" onclick="clearBudgetOnly()">
+                    <i class="fas fa-file-contract"></i> <strong>Solo Presupuesto</strong>
+                    <span style="font-size: 0.8em; margin-left: auto; opacity: 0.8;">(Items B1)</span>
+                </button>
+                
+                <button class="btn btn-danger" style="width: 100%; justify-content: flex-start;" onclick="confirmFullReset()">
+                    <i class="fas fa-bomb"></i> <strong>Borrar Todo</strong>
+                    <span style="font-size: 0.8em; margin-left: auto; opacity: 0.8;">(Fábrica)</span>
+                </button>
+                
+                <p style="font-size: 0.75rem; color: #a0aec0; margin-top: 15px;">
+                    "Solo Presupuesto" vacía la lista actual pero MANTIENE tu Banco de Ítems y Base de Insumos.
+                </p>
+            </div>
+        </div>
+    </div>
 
 <div id="toast">Guardado automáticamente</div>
 
@@ -1963,6 +1996,25 @@
     let editorBackup = null; 
     let isCreatingNew = false; 
     let lastToastTime = 0;
+
+    // --- HELPERS PARA EXCELJS ---
+    // 1. Guardar Buffer como archivo (Reemplaza XLSX.writeFile)
+    function saveExcelBuffer(buffer, filename) {
+        const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+        saveAs(blob, filename); // Usa FileSaver.js
+    }
+
+    // 2. Convertir Hoja de ExcelJS a Matriz de Datos (Simula XLSX.utils.sheet_to_json con header:1)
+    function sheetToDataArray(worksheet) {
+        const data = [];
+        worksheet.eachRow({ includeEmpty: true }, (row, rowNumber) => {
+            // ExcelJS usa índices base-1 y row.values[0] suele ser null/undefined
+            // Cortamos el primer elemento para obtener un array base-0 limpio
+            const rowValues = Array.isArray(row.values) ? row.values.slice(1) : [];
+            data.push(rowValues);
+        });
+        return data;
+    }
     
     // Estado de ordenamiento para DB
     let dbSortState = {
@@ -2366,6 +2418,44 @@ Cantidades: ${s.decimals_qty} decimales`;
         }
     }
 
+    // --- LÓGICA DE BORRADO SELECTIVO ---
+    function openDeleteModal() {
+        document.getElementById('deleteOptionsModal').style.display = 'block';
+    }
+
+    function closeDeleteModal() {
+        document.getElementById('deleteOptionsModal').style.display = 'none';
+    }
+
+    function clearBudgetOnly() {
+        // Pregunta de seguridad simple
+        if(confirm("¿Estás seguro de vaciar SOLAMENTE los ítems del presupuesto actual?\n\nTu Banco de Ítems y Base de Insumos NO se borrarán.")) {
+            
+            // Vaciamos el array de ítems del proyecto
+            appData.projectItems = [];
+            
+            // Opcional: Si quieres reiniciar también los módulos a uno solo "General", descomenta esto:
+            const defaultId = 'mod_' + Date.now();
+            appData.modules = [{ id: defaultId, name: "General" }];
+            appData.activeModuleId = defaultId;
+
+            saveData();
+            renderB1();      // Actualizar tabla
+            recalculateTotalsDisplay(); // Actualizar totales visuales
+            closeDeleteModal();
+            showToast("Presupuesto vaciado correctamente");
+        }
+    }
+
+    function confirmFullReset() {
+        // Cierra el modal y llama a la función destructiva original
+        closeDeleteModal();
+        // Pequeño delay para que la UI se sienta fluida
+        setTimeout(() => {
+            resetData(); // Tu función original que borra caché, cookies y localStorage
+        }, 100);
+    }
+    
     // --- FUNCIÓN DE RESETEO PROFUNDO (STORAGE + COOKIES + CACHE) ---
     async function resetData() {
         if (!confirm("⚠️ ATENCIÓN ⚠️\nEsta acción realizará un BORRADO DE FÁBRICA:\n\n1. Eliminará todos los proyectos y bancos de ítems.\n2. Borrará la configuración personal.\n3. Limpiará la Memoria Caché y Cookies de la aplicación.\n\n¿Estás absolutamente seguro de continuar?")) {
@@ -2671,6 +2761,7 @@ Cantidades: ${s.decimals_qty} decimales`;
                     </button>
                 </td>
                 <td class="text-center" style="font-weight:600;">${globalIndex + 1}</td>
+                <td><input type="text" value="${item.projectCode || ''}"onchange="updateProjectItem(${item.id}, 'projectCode', this.value)" placeholder="-" style="text-align:center;"></td>
                 <td><textarea class="table-input" onchange="updateProjectItem(${item.id}, 'description', this.value)">${escapeHtml(item.description)}</textarea></td>
                 <td><input type="text" value="${escapeHtml(item.unit)}" onchange="updateProjectItem(${item.id}, 'unit', this.value)"></td>
                 <td><input type="text" inputmode="decimal" value="${item.quantity}" onchange="updateProjectItem(${item.id}, 'quantity', handleMathInput(this, 'qty'))" onfocus="this.select()" style="text-align:center;"></td>
@@ -2776,7 +2867,8 @@ Cantidades: ${s.decimals_qty} decimales`;
 
     function createEmptyItemB1() {
         const newItem = { 
-            id: Date.now() + Math.floor(Math.random() * 1000), 
+            id: Date.now() + Math.floor(Math.random() * 1000),
+            projectCode: "", 
             description: "Nuevo Ítem", 
             unit: "glb", 
             quantity: 1, 
@@ -3190,43 +3282,65 @@ Cantidades: ${s.decimals_qty} decimales`;
         showToast(message || 'Ningún insumo fue procesado');
     }
 
-    function exportInsumosToExcel() {
+    async function exportInsumosToExcel() {
         if (insumosList.length === 0) {
             showToast('No hay insumos para exportar');
             return;
         }
-        
+
         const tipoTexto = {
             'materiales': 'Materiales',
             'mano_obra': 'Mano_de_Obra',
             'equipos': 'Equipos'
         };
+
+        const workbook = new ExcelJS.Workbook();
+        const worksheet = workbook.addWorksheet('Insumos');
+
+        // Título
+        worksheet.mergeCells('A1:E1');
+        const titleCell = worksheet.getCell('A1');
+        titleCell.value = `INSUMOS ${tipoTexto[currentInsumosType].toUpperCase()} - PRESUPUESTO`;
+        titleCell.font = { bold: true, size: 14 };
+        titleCell.alignment = { horizontal: 'center' };
+
+        // Cabeceras (Fila 2)
+        worksheet.getRow(2).values = ['Descripción', 'Unidad', 'Cantidad Total', 'Precio Unitario', 'Total'];
+        const headerRow = worksheet.getRow(2);
+        headerRow.font = { bold: true, color: { argb: 'FFFFFFFF' } };
+        headerRow.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF2D3748' } };
         
-        // Preparar datos para Excel
-        // CORRECCIÓN: Quitamos fmt() y parseFloat() innecesarios. 
-        // Pasamos el número crudo para que Excel sume bien.
-        const data = [
-            [`INSUMOS ${tipoTexto[currentInsumosType].toUpperCase()} - PRESUPUESTO`],
-            ['Descripción', 'Unidad', 'Cantidad Total', 'Precio Unitario', 'Total'],
-            ...insumosList.map(insumo => [
+        // Anchos
+        worksheet.getColumn(1).width = 50;
+        worksheet.getColumn(2).width = 10;
+        worksheet.getColumn(3).width = 15;
+        worksheet.getColumn(4).width = 15;
+        worksheet.getColumn(5).width = 15;
+
+        // Datos
+        insumosList.forEach(insumo => {
+            const row = worksheet.addRow([
                 insumo.desc,
                 insumo.unit,
-                insumo.cantidadTotal,   // Valor numérico directo
-                insumo.precioUnitario,  // Valor numérico directo
-                insumo.precioTotal      // Valor numérico directo
-            ])
-        ];
-        
-        // Calcular Total Presupuesto
+                insumo.cantidadTotal,
+                insumo.precioUnitario,
+                insumo.precioTotal
+            ]);
+            // Formato numérico
+            row.getCell(3).numFmt = '#,##0.00';
+            row.getCell(4).numFmt = '#,##0.00';
+            row.getCell(5).numFmt = '#,##0.00';
+        });
+
+        // Total General
         const totalGeneral = insumosList.reduce((sum, insumo) => sum + insumo.precioTotal, 0);
-        
-        // Agregar fila de total presupuesto
-        data.push(['', '', '', 'TOTAL PRESUPUESTO:', totalGeneral]);
-        
-        const ws = XLSX.utils.aoa_to_sheet(data);
-        const wb = XLSX.utils.book_new();
-        XLSX.utils.book_append_sheet(wb, ws, "Insumos");
-        XLSX.writeFile(wb, `Insumos_${tipoTexto[currentInsumosType]}_${new Date().toISOString().slice(0,10)}.xlsx`);
+        const totalRow = worksheet.addRow(['', '', '', 'TOTAL PRESUPUESTO:', totalGeneral]);
+        totalRow.font = { bold: true };
+        totalRow.getCell(5).numFmt = '#,##0.00 "Bs"';
+        totalRow.getCell(5).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFBEE3F8' } };
+
+        const buffer = await workbook.xlsx.writeBuffer();
+        saveExcelBuffer(buffer, `Insumos_${tipoTexto[currentInsumosType]}_${new Date().toISOString().slice(0,10)}.xlsx`);
         showToast('Excel exportado correctamente');
     }
 
@@ -3384,132 +3498,107 @@ Cantidades: ${s.decimals_qty} decimales`;
         if (!file) return;
 
         const reader = new FileReader();
-        reader.onload = function(e) {
-            const data = new Uint8Array(e.target.result);
-            const workbook = XLSX.read(data, { type: 'array' });
-            const sheet = workbook.Sheets[workbook.SheetNames[0]];
-            const jsonData = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: "" });
+        reader.onload = async function(e) {
+            try {
+                const buffer = e.target.result;
+                const workbook = new ExcelJS.Workbook();
+                await workbook.xlsx.load(buffer);
+                const worksheet = workbook.getWorksheet(1);
+                
+                // Convertir a Matriz
+                const jsonData = sheetToDataArray(worksheet);
 
-            let importedCount = 0;
-            // Contadores para estadísticas de insumos
-            let stats = { new: 0, updated: 0 }; 
+                // --- RESTO DEL CÓDIGO IDENTICO, SOLO CAMBIAMOS LA LECTURA INICIAL ---
+                
+                let importedCount = 0;
+                let stats = { new: 0, updated: 0 }; 
+                let currentItem = null;
+                let currentSection = null;
+                let baseCode = getNextBankCode();
 
-            let currentItem = null;
-            let currentSection = null;
-            let baseCode = getNextBankCode();
+                for (let i = 0; i < jsonData.length; i++) {
+                    const row = jsonData[i];
+                    // Convertimos toda la fila a string para buscar palabras clave
+                    const rowStr = row.map(c => c ? c.toString().toUpperCase() : "").join(" ");
 
-            for (let i = 0; i < jsonData.length; i++) {
-                const row = jsonData[i];
-                const rowStr = row.join(" ").toUpperCase();
+                    let itemFound = false;
+                    for(let c=0; c<row.length; c++) {
+                        if(row[c] && row[c].toString().toUpperCase().includes("ITEM:")) {
+                            if (currentItem && currentItem.description) { 
+                                appData.itemBank.push(currentItem); importedCount++; 
+                            }
+                            
+                            let parts = row[c].toString().split(":");
+                            let name = parts.slice(1).join(":"); 
+                            if(name.trim() === "" && row[c+1]) name = row[c+1];
+                            
+                            let unit = "glb";
+                            for(let u=c; u<row.length; u++) {
+                                if(row[u] && row[u].toString().toUpperCase().includes("UNIDAD:")) {
+                                    let uParts = row[u].toString().split(":");
+                                    let unitVal = uParts.slice(1).join(":");
+                                    if(unitVal.trim() === "" && row[u+1]) unitVal = row[u+1];
+                                    unit = unitVal.trim();
+                                }
+                            }
 
-                let itemFound = false;
-                // Detección de Cabecera de Ítem
-                // Detección de Cabecera de Ítem
-                for(let c=0; c<row.length; c++) {
-                    if(row[c] && row[c].toString().toUpperCase().includes("ITEM:")) {
-                        // Guardar el ítem anterior si existe
-                        if (currentItem && currentItem.description) { 
-                            appData.itemBank.push(currentItem); 
-                            importedCount++; 
+                            currentItem = {
+                                id: Date.now() + Math.random(),
+                                code: baseCode + importedCount,
+                                description: name ? name.trim() : "Item Importado",
+                                unit: unit,
+                                quantity: 1,
+                                materials: [], labor: [], equipos: [],
+                                moduleId: appData.activeModuleId
+                            };
+                            currentSection = null; itemFound = true; break;
                         }
+                    }
+                    if(itemFound) continue;
+                    if (!currentItem) continue;
+
+                    if (rowStr.includes("MATERIALES") && !rowStr.includes("TOTAL")) { currentSection = 'MAT'; continue; }
+                    if (rowStr.includes("MANO DE OBRA") && !rowStr.includes("TOTAL")) { currentSection = 'MO'; continue; }
+                    if ((rowStr.includes("EQUIPO") || rowStr.includes("HERRAMIENTAS")) && !rowStr.includes("TOTAL")) { currentSection = 'EQ'; continue; }
+                    
+                    if (rowStr.includes("TOTAL") || rowStr.includes("SUBTOTAL")) { currentSection = null; continue; }
+
+                    if (currentSection) {
+                        // Indices aproximados
+                        let desc = row[2]; 
+                        let unit = row[3]; 
+                        let qty = parseFloat(row[4]); 
+                        let price = parseFloat(row[5]);
                         
-                        // --- CORRECCIÓN INICIO ---
-                        // Convertimos a string, separamos por ":", quitamos el primer elemento ("ITEM")
-                        // y volvemos a unir el resto con ":" para no perder descripciones como "Muro: Ladrillo"
-                        let parts = row[c].toString().split(":");
-                        let name = parts.slice(1).join(":"); 
-                        
-                        // Si el nombre estaba vacío en esa celda (ej: celda A1="ITEM:", celda B1="Nombre"), miramos la siguiente
-                        if(name.trim() === "" && row[c+1]) name = row[c+1];
-                        // --- CORRECCIÓN FIN ---
-                        
-                        let unit = "glb";
-                        for(let u=c; u<row.length; u++) {
-                            if(row[u] && row[u].toString().toUpperCase().includes("UNIDAD:")) {
-                                // Aplicamos la misma lógica de seguridad para la unidad
-                                let uParts = row[u].toString().split(":");
-                                let unitVal = uParts.slice(1).join(":");
-                                
-                                if(unitVal.trim() === "" && row[u+1]) unitVal = row[u+1];
-                                unit = unitVal.trim();
+                        if (desc && desc.toString().trim() !== "" && !isNaN(price)) {
+                            let res = { desc: desc.toString().trim(), unit: unit || "u", qty: qty || 0, price: price || 0 };
+                            let dbType = '';
+                            if (currentSection === 'MAT') { currentItem.materials.push(res); dbType = 'materiales'; }
+                            else if (currentSection === 'MO') { currentItem.labor.push(res); dbType = 'mano_obra'; }
+                            else if (currentSection === 'EQ') { currentItem.equipos.push(res); dbType = 'equipos'; }
+
+                            if (dbType) {
+                                const result = syncImportedResourceToDB(dbType, res);
+                                if (result === 'new') stats.new++;
+                                if (result === 'updated') stats.updated++;
                             }
                         }
-
-                        currentItem = {
-                            id: Date.now() + Math.random(),
-                            code: baseCode + importedCount,
-                            description: name.trim() || "Item Importado",
-                            unit: unit,
-                            quantity: 1,
-                            materials: [], labor: [], equipos: [],
-                            moduleId: appData.activeModuleId
-                        };
-                        currentSection = null; itemFound = true; break;
                     }
                 }
-                if(itemFound) continue;
-                if (!currentItem) continue;
+                if (currentItem && currentItem.description) { appData.itemBank.push(currentItem); importedCount++; }
 
-                // Detección de Secciones
-                if (rowStr.includes("MATERIALES") && !rowStr.includes("TOTAL")) { currentSection = 'MAT'; continue; }
-                if (rowStr.includes("MANO DE OBRA") && !rowStr.includes("TOTAL")) { currentSection = 'MO'; continue; }
-                if ((rowStr.includes("EQUIPO, MAQUINARIA Y HERRAMIENTAS") || rowStr.includes("HERRAMIENTAS")) && !rowStr.includes("TOTAL")) { currentSection = 'EQ'; continue; }
+                saveData();
+                renderBankList();
+                renderDBTables();
+
+                if(importedCount > 0) showToast(`Importados ${importedCount} APUs.`);
+                else showToast('No se encontraron ítems');
                 
-                if (rowStr.includes("TOTAL") || rowStr.includes("SUBTOTAL") || rowStr.includes("IMPUESTOS")) { currentSection = null; continue; }
-
-                // Procesamiento de Filas de Insumos
-                if (currentSection) {
-                    // Índices asumidos: 2=Desc, 3=Unit, 4=Qty, 5=Price (Ajustar según formato Excel común)
-                    let desc = row[2]; 
-                    let unit = row[3]; 
-                    let qty = parseFloat(row[4]); 
-                    let price = parseFloat(row[5]);
-                    
-                    if (desc && desc.toString().trim() !== "" && !isNaN(price)) {
-                        let res = { desc: desc.toString().trim(), unit: unit || "u", qty: qty || 0, price: price || 0 };
-                        
-                        // 1. Agregar al APU
-                        let dbType = '';
-                        if (currentSection === 'MAT') {
-                            currentItem.materials.push(res);
-                            dbType = 'materiales';
-                        } else if (currentSection === 'MO') {
-                            currentItem.labor.push(res);
-                            dbType = 'mano_obra';
-                        } else if (currentSection === 'EQ') {
-                            currentItem.equipos.push(res);
-                            dbType = 'equipos';
-                        }
-
-                        // 2. LOGICA MEJORADA: Sincronizar con Base de Datos Global
-                        if (dbType) {
-                            const result = syncImportedResourceToDB(dbType, res);
-                            if (result === 'new') stats.new++;
-                            if (result === 'updated') stats.updated++;
-                        }
-                    }
-                }
+                input.value = '';
+            } catch(e) {
+                console.error(e);
+                showToast("Error leyendo archivo");
             }
-            // Guardar el último ítem procesado
-            if (currentItem && currentItem.description) { appData.itemBank.push(currentItem); importedCount++; }
-
-            // Guardar datos y actualizar interfaz
-            saveData();
-            renderBankList();
-            renderDBTables(); // Actualizar tablas de insumos para ver los nuevos agregados
-
-            // Mensaje final detallado
-            if(importedCount > 0) {
-                let msg = `Importados ${importedCount} APUs. `;
-                if (stats.new > 0 || stats.updated > 0) {
-                    msg += `Insumos: ${stats.new} nuevos, ${stats.updated} act.`;
-                }
-                showToast(msg);
-            } else {
-                showToast('No se encontraron ítems para importar');
-            }
-            
-            input.value = '';
         };
         reader.readAsArrayBuffer(file);
     }
@@ -4425,48 +4514,161 @@ Cantidades: ${s.decimals_qty} decimales`;
         }
     }
 
-    // --- ARCHIVOS ---
-    function exportB1ToExcel() {
-        let data = [["MODULO", "ITEM", "DESCRIPCION", "UNIDAD", "CANTIDAD", "P. UNITARIO", "TOTAL"]];
-        
-        let contadorGlobal = 1;
-        let granTotalPresupuesto = 0;
+    // --- ARCHIVOS RUPE ---
+    async function exportB1ToExcel() {
+        const pName = document.getElementById('reportProjectName')?.value || "PROYECTO";
+        const f5 = (n) => parseFloat(parseFloat(n || 0).toFixed(5));
 
-        // Obtener configuración de decimales para redondear en el export
-        // Si prefieres el valor exacto en Excel, quita el .toFixed() y usa parseFloat directo.
-        const decTotal = appData.settings.decimals_total || 2;
-        const decQty = appData.settings.decimals_qty || 2;
+        // --- ESTILOS ---
+        const borderStyle = {
+            top: { style: 'thin' }, left: { style: 'thin' }, bottom: { style: 'thin' }, right: { style: 'thin' }
+        };
 
-        // Recorremos los módulos en orden
-        appData.modules.forEach(mod => {
-            const modItems = appData.projectItems.filter(item => item.moduleId === mod.id);
+        const styleHeader = {
+            font: { bold: true, color: { argb: 'FFFFFFFF' } },
+            fill: { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF2D3748' } }, // Gris oscuro
+            alignment: { horizontal: 'center', vertical: 'middle' },
+            border: borderStyle
+        };
 
-            modItems.forEach((i) => {
-                let pu = calculateUnitPrice(i);
-                let totalItem = pu * i.quantity;
-                
-                granTotalPresupuesto += totalItem;
+        const styleCell = {
+            border: borderStyle,
+            alignment: { vertical: 'middle' }
+        };
 
-                data.push([
-                    mod.name,
-                    contadorGlobal++, 
-                    i.description, 
-                    i.unit, 
-                    // Aplicamos redondeo para que coincida con lo "visible" en pantalla
-                    parseFloat(i.quantity.toFixed(decQty)), 
-                    parseFloat(pu.toFixed(decTotal)),        
-                    parseFloat(totalItem.toFixed(decTotal))  
-                ]);
+        // Estilo para la fila gris de items (padres)
+        const styleItemFill = {
+            type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF0F4F8' } // Gris muy claro
+        };
+
+        // --- HELPER PARA GUARDAR ---
+        const finalizeAndSave = async (wb, fileName) => {
+            const buffer = await wb.xlsx.writeBuffer();
+            saveAs(new Blob([buffer]), fileName);
+        };
+
+        // --- HELPER PARA OBTENER INSUMOS GLOBALES ---
+        const getProjectInsumos = (type) => {
+            const list = [];
+            appData.projectItems.forEach(item => {
+                const resources = (type === 'mat') ? item.materials : (type === 'mo' ? item.labor : item.equipos);
+                resources?.forEach(r => {
+                    const existing = list.find(x => x.desc === r.desc && x.unit === r.unit);
+                    if (existing) {
+                        existing.qty += (r.qty * item.quantity);
+                    } else {
+                        list.push({ desc: r.desc, unit: r.unit, price: r.price, qty: (r.qty * item.quantity) });
+                    }
+                });
             });
-        });
-        
-        data.push(["", "", "", "", "", "TOTAL PRESUPUESTO:", parseFloat(granTotalPresupuesto.toFixed(decTotal))]);
+            return list;
+        };
 
-        const ws = XLSX.utils.aoa_to_sheet(data);
-        const wb = XLSX.utils.book_new();
-        XLSX.utils.book_append_sheet(wb, ws, "Presupuesto");
-        XLSX.writeFile(wb, `Presupuesto_General_${new Date().toISOString().slice(0,10)}.xlsx`);
-        showToast('Excel exportado con formato visible');
+        // ================================================================
+        // A. GENERAR ARCHIVOS B3 (MATERIALES, MANO DE OBRA, EQUIPO)
+        // ================================================================
+        const specs = [
+            { type: 'mat', name: 'B3-MATERIALES.xlsx', sheet: 'B3-MATERIALES', title: 'MATERIALES' },
+            { type: 'mo', name: 'B3-MANO_DE_OBRA.xlsx', sheet: 'Hoja1', title: 'MANO DE OBRA' },
+            { type: 'eq', name: 'B3-MAQUINARIA_Y_EQUIPO.xlsx', sheet: 'Hoja1', title: 'EQUIPO, MAQUINARIA Y HERRAMIENTAS' }
+        ];
+
+        for (const spec of specs) {
+            const wb = new ExcelJS.Workbook();
+            const ws = wb.addWorksheet(spec.sheet);
+
+            // Título
+            ws.addRow(["", spec.title, "", ""]);
+            ws.mergeCells('B1:D1');
+            ws.getCell('B1').font = { bold: true, size: 12 };
+
+            // Cabecera
+            const hRow = ws.addRow(["Nº", "DESCRIPCIÓN", "UNIDAD", "PRECIO UNITARIO"]);
+            for(let i=1; i<=4; i++) hRow.getCell(i).style = styleHeader;
+
+            // Anchos
+            ws.getColumn(1).width = 3;
+            ws.getColumn(2).width = 50;
+            ws.getColumn(3).width = 12;
+            ws.getColumn(4).width = 18;
+
+            // Datos
+            const data = getProjectInsumos(spec.type);
+            data.forEach((ins, i) => {
+                const row = ws.addRow([i + 1, ins.desc, ins.unit, f5(ins.price)]);
+                row.eachCell(c => Object.assign(c, styleCell));
+                row.getCell(4).numFmt = '0.00000';
+            });
+
+            // Fila Asterisco
+            const starRow = ws.addRow(["*", "", "", ""]);
+            for(let i=1; i<=4; i++) starRow.getCell(i).border = borderStyle;
+            
+            await finalizeAndSave(wb, spec.name);
+        }
+
+        // ================================================================
+        // B. GENERAR FORM_CANTIDADES.xlsx (3 HOJAS)
+        // ================================================================
+        const wbForm = new ExcelJS.Workbook();
+        const forms = [
+            { sheet: 'PPTO. MATERIALES', title: 'MATERIALES-INSUMOS', key: 'materials' },
+            { sheet: 'PPTO. MANO DE OBRA', title: 'MANO DE OBRA-INSUMOS', key: 'labor' },
+            { sheet: 'PPTO. MAQUINARIA Y EQUIPO', title: 'EQUIPO, MAQUINARIA Y HERRAMIENTAS-INSUMOS', key: 'equipos' }
+        ];
+
+        forms.forEach(f => {
+            const ws = wbForm.addWorksheet(f.sheet);
+            
+            // Título
+            ws.addRow(["", f.title]);
+            
+            // Cabecera
+            const hRow = ws.addRow(["Código", "Descripción", "Unidad", "Cantidad", "Precio Unitario", "Precio Total (Bs)"]);
+            for(let i=1; i<=6; i++) hRow.getCell(i).style = styleHeader;
+
+            // Anchos
+            ws.getColumn(1).width = 10;
+            ws.getColumn(2).width = 45;
+            ws.getColumn(3).width = 10;
+            ws.getColumn(4).width = 15;
+            ws.getColumn(5).width = 15;
+            ws.getColumn(6).width = 18;
+
+            appData.projectItems.forEach(item => {
+                // Fila de ITEM PADRE
+                // Se crea la fila y se itera solo de la columna 1 a la 6 para aplicar el estilo
+                const code = item.projectCode ? `>${item.projectCode}` : `>${item.id}`;
+                const itemRow = ws.addRow([code, item.description, "", "", "", ""]);
+                
+                for(let c=1; c<=6; c++) {
+                    const cell = itemRow.getCell(c);
+                    cell.fill = styleItemFill; // Color de fondo solo en celdas de la tabla
+                    cell.font = { bold: true };
+                    cell.border = borderStyle;
+                }
+
+                // Filas de Insumos
+                (item[f.key] || []).forEach((r, idx) => {
+                    const cantItem = f5(r.qty);
+                    const pTotal = f5(cantItem * r.price);
+                    const row = ws.addRow([idx + 1, r.desc, r.unit, cantItem, f5(r.price), pTotal]);
+                    row.eachCell(c => Object.assign(c, styleCell));
+                    row.getCell(4).numFmt = '0.00000';
+                    row.getCell(5).numFmt = '0.00000';
+                    row.getCell(6).numFmt = '0.00000';
+                });
+            });
+
+            // Fila Asterisco (Cierre de tabla)
+            const starRow = ws.addRow(["*", "", "", "", "", ""]);
+            for(let c=1; c<=6; c++) {
+                starRow.getCell(c).border = borderStyle;
+            }
+        });
+
+        await finalizeAndSave(wbForm, "FORM_CANTIDADES.xlsx");
+        showToast("Exportación completada.");
     }
 
     function exportProjectJSON() {
@@ -4666,21 +4868,35 @@ Cantidades: ${s.decimals_qty} decimales`;
         }
         
         const r = new FileReader();
-        r.onload = function(e) {
+        r.onload = async function(e) {
             try {
-                const wb = XLSX.read(new Uint8Array(e.target.result), {type:'array'});
-                const json = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], {header:1});
+                const buffer = e.target.result;
+                const workbook = new ExcelJS.Workbook();
+                await workbook.xlsx.load(buffer);
+                const worksheet = workbook.getWorksheet(1);
+                
+                // Convertir a array simple
+                const json = sheetToDataArray(worksheet);
                 let c=0;
                 
+                // Asumiendo que la fila 0 es cabecera, empezamos en 1
                 for(let i=1; i<json.length; i++) {
                     let row = json[i];
-                    if(row.length>=2 && row[1]) {
+                    // row[1] = Descripción, row[2] = Unidad, row[3] o [4] = Precio
+                    if(row && row.length>=2 && row[1]) {
+                        // Manejo seguro de valores ExcelJS
+                        const desc = row[1] ? row[1].toString().trim() : "";
+                        const unit = row[2] ? row[2].toString().trim() : "u";
+                        let price = parseFloat(row[3]);
+                        if(isNaN(price)) price = parseFloat(row[4]); // Intentar columna siguiente
+                        if(isNaN(price)) price = 0;
+
                         appData.database[type].push({
-                            id: Date.now() + Math.floor(Math.random() * 100000) + c, // ID Único
+                            id: Date.now() + Math.floor(Math.random() * 100000) + c,
                             code: "0", 
-                            desc: row[1].toString().trim(), 
-                            unit: row[2]||'u', 
-                            price: parseFloat(row[3])||parseFloat(row[4])||0
+                            desc: desc, 
+                            unit: unit, 
+                            price: price
                         });
                         c++;
                     }
@@ -4691,11 +4907,11 @@ Cantidades: ${s.decimals_qty} decimales`;
                     renderDBTables(); 
                     showToast(`Importados ${c} insumos`);
                 } else {
-                    showToast('No se encontraron datos para importar');
+                    showToast('No se encontraron datos válidos');
                 }
-                
                 document.getElementById('dbFile').value = '';
             } catch(err) {
+                console.error(err);
                 showToast('Error al procesar el archivo');
             }
         };
@@ -5580,134 +5796,179 @@ function generatePDFReportSICOES(type, projectName) {
     }
 }
 
-// ==========================================
 //   MOTOR EXCEL SICOES (CON CÁLCULO COMPLETO)
-function generateExcelReportSICOES(type, projectName) {
-    const wb = XLSX.utils.book_new();
-    const s = appData.settings;
-    const n = (num, t) => { 
-        let d = 2; 
-        if(t==='qty') d = s.decimals_qty; 
-        if(t==='total') d = s.decimals_total; 
-        if(t==='price') d = s.decimals_price; 
-        if(t==='yield') d = s.decimals_yield; 
-        if(t==='partial') d = s.decimals_partial; 
-        return parseFloat(parseFloat(num).toFixed(d));
-    };
+async function generateExcelReportSICOES(type, projectName) {
+        const workbook = new ExcelJS.Workbook();
+        workbook.creator = "PresuRE App";
+        
+        const s = appData.settings;
+        const n = (num, t) => { 
+            let d = 2; 
+            if(t==='qty') d = s.decimals_qty; 
+            if(t==='total') d = s.decimals_total; 
+            if(t==='price') d = s.decimals_price; 
+            if(t==='yield') d = s.decimals_yield; 
+            if(t==='partial') d = s.decimals_partial; 
+            return parseFloat(parseFloat(num).toFixed(d));
+        };
 
-    const getWsPG = () => {
-        const data = [["FORMULARIO B-1"], ["PRESUPUESTO GENERAL DE OBRA"], [`PROYECTO: ${projectName}`], [], ["Nº", "DESCRIPCIÓN", "UNIDAD", "CANTIDAD", "P. UNITARIO", "TOTAL"]];
-        let c=1, gt=0;
-        appData.modules.forEach(mod => {
-            data.push([mod.name.toUpperCase()]);
-            appData.projectItems.filter(i => i.moduleId === mod.id).forEach(item => {
-                // 1. Calcular P. Unitario base
-                const rawPu = calculateUnitPrice(item);
-                
-                // 2. Redondear Matemáticamente (Crucial para que Excel sume bien)
-                const pu = roundToConfig(rawPu, 'total');
-                const qty = roundToConfig(item.quantity, 'qty');
-                
-                // 3. Calcular Total
-                const tot = pu * qty;
-                
-                // 4. Acumular Gran Total
-                gt += tot;
+        // --- SUB: B-1 PRESUPUESTO ---
+        const buildB1 = () => {
+            const ws = workbook.addWorksheet("B-1");
+            ws.columns = [
+                { width: 5 }, { width: 45 }, { width: 10 }, { width: 12 }, { width: 12 }, { width: 15 }
+            ];
+            
+            // Encabezados
+            ws.addRow(["FORMULARIO B-1"]).font = { bold: true, size: 14 };
+            ws.addRow(["PRESUPUESTO GENERAL DE OBRA"]).font = { bold: true };
+            ws.addRow([`PROYECTO: ${projectName}`]);
+            ws.addRow([]);
+            
+            const header = ws.addRow(["Nº", "DESCRIPCIÓN", "UNIDAD", "CANTIDAD", "P. UNITARIO", "TOTAL"]);
+            header.font = { bold: true, color: { argb: 'FFFFFFFF' } };
+            header.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF274B7D' } };
 
-                // 5. Insertar en Excel (Usamos los valores ya redondeados)
-                data.push([
-                    c++, 
-                    item.description, 
-                    item.unit, 
-                    n(qty, 'qty'),   // Helper 'n' formatea para Excel
-                    n(pu, 'total'), 
-                    n(tot, 'total')
-                ]);
+            let c=1, gt=0;
+            appData.modules.forEach(mod => {
+                const rMod = ws.addRow([mod.name.toUpperCase()]);
+                rMod.font = { bold: true, italic: true };
+                rMod.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFEDF2F7' } };
+
+                appData.projectItems.filter(i => i.moduleId === mod.id).forEach(item => {
+                    const pu = calculateUnitPrice(item);
+                    // Redondeo visual antes de multiplicar
+                    const puR = roundToConfig(pu, 'total');
+                    const qtyR = roundToConfig(item.quantity, 'qty');
+                    const tot = puR * qtyR;
+                    gt += tot;
+
+                    ws.addRow([c++, item.description, item.unit, n(qtyR,'qty'), n(puR,'total'), n(tot,'total')]);
+                });
             });
-        });
-        data.push(["", "TOTAL PRESUPUESTO", "", "", "", n(gt,'total')]);
-        const ws = XLSX.utils.aoa_to_sheet(data); ws['!cols']=[{wch:5},{wch:40},{wch:8},{wch:12},{wch:12},{wch:15}];
-        return ws;
-    };
 
-    const getWsAPU = () => {
-        const data = [["FORMULARIO B-2"], ["ANÁLISIS DE PRECIOS UNITARIOS"], [`PROYECTO: ${projectName}`], []];
-        let c = 1;
+            const rTot = ws.addRow(["", "TOTAL PRESUPUESTO", "", "", "", n(gt,'total')]);
+            rTot.font = { bold: true };
+            rTot.getCell(6).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFC6F6D5' } };
+        };
 
-        appData.modules.forEach(mod => {
-            appData.projectItems.filter(i=>i.moduleId===mod.id).forEach(item => {
-                // Cálculos
-                const sumMat = item.materials.reduce((a,b)=>a+(b.qty*b.price),0);
-                const sumMo = item.labor.reduce((a,b)=>a+(b.qty*b.price),0);
-                const valSoc = sumMo * (s.social/100);
-                const valIvaMo = (sumMo + valSoc) * (s.iva_mo/100);
-                const totalMo = sumMo + valSoc + valIvaMo;
-                const sumEq = item.equipos.reduce((a,b)=>a+(b.qty*b.price),0);
-                const valTools = totalMo * (s.tools/100);
-                const totalEq = sumEq + valTools;
-                const cd = sumMat + totalMo + totalEq;
-                const valGG = cd * (s.gg/100);
-                const valUtil = (cd + valGG) * (s.util/100);
-                const valIT = (cd + valGG + valUtil) * (s.it/100);
-                let finalP = cd + valGG + valUtil + valIT;
-                finalP = roundToConfig(finalP, 'total');
+        // --- SUB: B-2 APUS ---
+        const buildAPU = () => {
+            const ws = workbook.addWorksheet("B-2");
+            ws.columns = [{width:40}, {width:10}, {width:12}, {width:12}, {width:15}];
+            
+            ws.addRow(["FORMULARIO B-2"]).font = { bold: true, size: 14 };
+            ws.addRow(["ANÁLISIS DE PRECIOS UNITARIOS"]);
+            ws.addRow([`PROYECTO: ${projectName}`]);
+            ws.addRow([]);
 
-                // Estructura Rows
-                data.push(["ÍTEM " + c++, item.description, "UNIDAD: " + item.unit, "CANTIDAD: " + n(item.quantity,'qty')]);
-                data.push(["DESCRIPCIÓN", "UNIDAD", "RENDIMIENTO", "PRECIO", "PARCIAL"]);
+            let c = 1;
+            appData.modules.forEach(mod => {
+                appData.projectItems.filter(i=>i.moduleId===mod.id).forEach(item => {
+                    // Cálculos
+                    const sumMat = item.materials.reduce((a,b)=>a+(b.qty*b.price),0);
+                    const sumMo = item.labor.reduce((a,b)=>a+(b.qty*b.price),0);
+                    const valSoc = sumMo * (s.social/100);
+                    const valIvaMo = (sumMo + valSoc) * (s.iva_mo/100);
+                    const totalMo = sumMo + valSoc + valIvaMo;
+                    const sumEq = item.equipos.reduce((a,b)=>a+(b.qty*b.price),0);
+                    const valTools = totalMo * (s.tools/100);
+                    const totalEq = sumEq + valTools;
+                    const cd = sumMat + totalMo + totalEq;
+                    const valGG = cd * (s.gg/100);
+                    const valUtil = (cd + valGG) * (s.util/100);
+                    const valIT = (cd + valGG + valUtil) * (s.it/100);
+                    let finalP = cd + valGG + valUtil + valIT;
+                    finalP = roundToConfig(finalP, 'total');
 
-                // Materiales
-                data.push(["MATERIALES"]);
-                item.materials.forEach(r => data.push(["  "+r.desc, r.unit, n(r.qty,'yield'), n(r.price,'price'), n(r.qty*r.price,'partial')]));
-                data.push(["SUBTOTAL MATERIALES", "", "", "", n(sumMat,'partial')]);
+                    // Encabezado Item
+                    const rHead = ws.addRow(["ÍTEM " + c++, item.description, "UNIDAD: " + item.unit, "CANT: " + n(item.quantity,'qty')]);
+                    rHead.font = { bold: true };
+                    rHead.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFE2E8F0' } };
 
-                // Mano de Obra
-                data.push(["MANO DE OBRA"]);
-                item.labor.forEach(r => data.push(["  "+r.desc, r.unit, n(r.qty,'yield'), n(r.price,'price'), n(r.qty*r.price,'partial')]));
-                data.push(["SUBTOTAL MANO DE OBRA", "", "", "", n(sumMo,'partial')]);
-                data.push([`CARGAS SOCIALES (${s.social}%)`, "", "", "", n(valSoc,'partial')]);
-                data.push([`IVA MO (${s.iva_mo}%)`, "", "", "", n(valIvaMo,'partial')]);
-                data.push(["TOTAL MANO DE OBRA", "", "", "", n(totalMo,'partial')]);
+                    ws.addRow(["DESCRIPCIÓN", "UNIDAD", "RENDIMIENTO", "PRECIO", "PARCIAL"]).font = { italic: true };
 
-                // Equipo
-                data.push(["EQUIPO Y MAQUINARIA"]);
-                item.equipos.forEach(r => data.push(["  "+r.desc, r.unit, n(r.qty,'yield'), n(r.price,'price'), n(r.qty*r.price,'partial')]));
-                data.push(["SUBTOTAL EQUIPO", "", "", "", n(sumEq,'partial')]);
-                data.push([`HERRAMIENTAS MENORES (${s.tools}% de MO)`, "", "", "", n(valTools,'partial')]);
-                data.push(["TOTAL EQUIPO", "", "", "", n(totalEq,'partial')]);
+                    // Materiales
+                    ws.addRow(["MATERIALES"]).font = { bold: true, underline: true };
+                    item.materials.forEach(r => ws.addRow(["  "+r.desc, r.unit, n(r.qty,'yield'), n(r.price,'price'), n(r.qty*r.price,'partial')]));
+                    ws.addRow(["SUBTOTAL MATERIALES", "", "", "", n(sumMat,'partial')]).font = { bold: true };
 
-                // Resumen
-                data.push(["COSTO DIRECTO", "", "", "", n(cd,'total')]);
-                data.push([`GASTOS GENERALES (${s.gg}%)`, "", "", "", n(valGG,'total')]);
-                data.push([`UTILIDAD (${s.util}%)`, "", "", "", n(valUtil,'total')]);
-                data.push([`IMPUESTO IT (${s.it}%)`, "", "", "", n(valIT,'total')]);
-                data.push(["TOTAL PRECIO UNITARIO", "", "", "", n(finalP,'total')]);
-                data.push([]); data.push([]); // Espaciador
+                    // MO
+                    ws.addRow(["MANO DE OBRA"]).font = { bold: true, underline: true };
+                    item.labor.forEach(r => ws.addRow(["  "+r.desc, r.unit, n(r.qty,'yield'), n(r.price,'price'), n(r.qty*r.price,'partial')]));
+                    ws.addRow(["SUBTOTAL MANO DE OBRA", "", "", "", n(sumMo,'partial')]);
+                    ws.addRow([`CARGAS SOCIALES (${s.social}%)`, "", "", "", n(valSoc,'partial')]).font = { color: { argb: 'FF718096' } };
+                    ws.addRow([`IVA MO (${s.iva_mo}%)`, "", "", "", n(valIvaMo,'partial')]).font = { color: { argb: 'FF718096' } };
+                    ws.addRow(["TOTAL MANO DE OBRA", "", "", "", n(totalMo,'partial')]).font = { bold: true };
+
+                    // Equipo
+                    ws.addRow(["EQUIPO Y MAQUINARIA"]).font = { bold: true, underline: true };
+                    item.equipos.forEach(r => ws.addRow(["  "+r.desc, r.unit, n(r.qty,'yield'), n(r.price,'price'), n(r.qty*r.price,'partial')]));
+                    ws.addRow(["SUBTOTAL EQUIPO", "", "", "", n(sumEq,'partial')]);
+                    ws.addRow([`HERRAMIENTAS MENORES (${s.tools}% de MO)`, "", "", "", n(valTools,'partial')]).font = { color: { argb: 'FF718096' } };
+                    ws.addRow(["TOTAL EQUIPO", "", "", "", n(totalEq,'partial')]).font = { bold: true };
+
+                    // Resumen
+                    ws.addRow(["COSTO DIRECTO", "", "", "", n(cd,'total')]);
+                    ws.addRow([`GASTOS GENERALES (${s.gg}%)`, "", "", "", n(valGG,'total')]);
+                    ws.addRow([`UTILIDAD (${s.util}%)`, "", "", "", n(valUtil,'total')]);
+                    ws.addRow([`IMPUESTO IT (${s.it}%)`, "", "", "", n(valIT,'total')]);
+                    const rFin = ws.addRow(["TOTAL PRECIO UNITARIO", "", "", "", n(finalP,'total')]);
+                    rFin.font = { bold: true, size: 11 };
+                    rFin.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFF0F0' } };
+                    
+                    ws.addRow([]); // Espacio
+                });
             });
-        });
-        const ws = XLSX.utils.aoa_to_sheet(data); ws['!cols']=[{wch:40},{wch:10},{wch:12},{wch:12},{wch:15}];
-        return ws;
-    };
+        };
 
-    const getWsInsumos = (cat) => {
-        collectInsumosFromProjectGlobal(cat);
-        const data = [[`LISTADO DE ${cat.toUpperCase()}`], [`PROYECTO: ${projectName}`], [], ["DESCRIPCIÓN", "UNIDAD", "CANT. TOTAL", "PRECIO UNIT.", "TOTAL"]];
-        let t = 0;
-        insumosGlobalList.forEach(i => { t+=i.precioTotal; data.push([i.desc, i.unit, n(i.cantidadTotal,'qty'), n(i.precioUnitario,'price'), n(i.precioTotal,'total')]); });
-        data.push(["COSTO TOTAL", "", "", "", n(t,'total')]);
-        return XLSX.utils.aoa_to_sheet(data);
-    };
+        // --- SUB: INSUMOS ---
+        const buildInsumos = (cat, sheetName) => {
+            collectInsumosFromProjectGlobal(cat);
+            const ws = workbook.addWorksheet(sheetName);
+            ws.columns = [{width:40}, {width:10}, {width:15}, {width:15}, {width:15}];
+            
+            ws.addRow([`LISTADO DE ${cat.toUpperCase()}`]).font = { bold: true, size: 14 };
+            ws.addRow([`PROYECTO: ${projectName}`]);
+            ws.addRow([]);
+            
+            const head = ws.addRow(["DESCRIPCIÓN", "UNIDAD", "CANT. TOTAL", "PRECIO UNIT.", "TOTAL"]);
+            head.font = { bold: true, color: { argb: 'FFFFFFFF' } };
+            head.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF2D3748' } };
 
-    // Exportar
-    if (type === 'masivo') {
-        XLSX.utils.book_append_sheet(wb, getWsPG(), "B-1"); XLSX.utils.book_append_sheet(wb, getWsAPU(), "B-2");
-        XLSX.utils.book_append_sheet(wb, getWsInsumos('materiales'), "Materiales"); XLSX.utils.book_append_sheet(wb, getWsInsumos('mano_obra'), "MO");
-        XLSX.utils.book_append_sheet(wb, getWsInsumos('equipos'), "Equipos");
-        XLSX.writeFile(wb, `PROYECTO_${projectName}_COMPLETO.xlsx`);
-    } else if (type === 'pg') XLSX.writeFile({Sheets:{"B-1":getWsPG()},SheetNames:["B-1"]}, "B1.xlsx");
-    else if (type === 'apu') XLSX.writeFile({Sheets:{"B-2":getWsAPU()},SheetNames:["B-2"]}, "B2.xlsx");
-    else XLSX.writeFile({Sheets:{[type]:getWsInsumos(type)},SheetNames:[type]}, `Insumos_${type}.xlsx`);
-}
+            let t = 0;
+            insumosGlobalList.forEach(i => { 
+                t+=i.precioTotal; 
+                ws.addRow([i.desc, i.unit, n(i.cantidadTotal,'qty'), n(i.precioUnitario,'price'), n(i.precioTotal,'total')]); 
+            });
+            
+            const rTot = ws.addRow(["COSTO TOTAL", "", "", "", n(t,'total')]);
+            rTot.font = { bold: true };
+            rTot.getCell(5).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFBEE3F8' } };
+        };
+
+        // Ejecutar lógica según tipo
+        if (type === 'masivo') {
+            buildB1(); buildAPU();
+            buildInsumos('materiales', "Materiales");
+            buildInsumos('mano_obra', "Mano de Obra");
+            buildInsumos('equipos', "Equipos");
+            const buffer = await workbook.xlsx.writeBuffer();
+            saveExcelBuffer(buffer, `PROYECTO_${projectName}_COMPLETO.xlsx`);
+        } else if (type === 'pg') {
+            buildB1();
+            const buffer = await workbook.xlsx.writeBuffer();
+            saveExcelBuffer(buffer, "B1.xlsx");
+        } else if (type === 'apu') {
+            buildAPU();
+            const buffer = await workbook.xlsx.writeBuffer();
+            saveExcelBuffer(buffer, "B2.xlsx");
+        } else {
+            buildInsumos(type, type);
+            const buffer = await workbook.xlsx.writeBuffer();
+            saveExcelBuffer(buffer, `Insumos_${type}.xlsx`);
+        }
+    }
 
 // Variable auxiliar global para insumos (se mantiene igual)
 let insumosGlobalList = [];
@@ -5845,6 +6106,169 @@ function collectInsumosFromProjectGlobal(type) {
         } else {
             showToast("No se encontraron diferencias de precios para actualizar.");
         }
+    }
+    // --- IMPORTACIÓN INTELIGENTE DE VOLÚMENES (PRESUPUESTO) --
+    function importBudgetFromExcel(input) {
+        const file = input.files[0];
+        if (!file) return;
+
+        const reader = new FileReader();
+        reader.onload = async function(e) {
+            try {
+                const buffer = e.target.result;
+                const workbook = new ExcelJS.Workbook();
+                await workbook.xlsx.load(buffer);
+                
+                // Obtener primera hoja
+                const worksheet = workbook.getWorksheet(1);
+                
+                // CONVERTIR A MATRIZ (Array of Arrays) usando nuestro helper
+                const jsonData = sheetToDataArray(worksheet);
+
+                if (jsonData.length === 0) {
+                    showToast("El archivo está vacío.");
+                    return;
+                }
+
+                // 1. Detectar índices de columnas
+                let headerRowIndex = -1;
+                let colDesc = -1, colUnit = -1, colQty = -1, colCode = -1;
+
+                for (let i = 0; i < Math.min(jsonData.length, 20); i++) {
+                    // Aseguramos que la fila exista y sea array
+                    if(!Array.isArray(jsonData[i])) continue;
+
+                    const row = jsonData[i].map(cell => cell ? cell.toString().toUpperCase().trim() : "");
+                    
+                    if (row.includes("DESCRIPCIÓN") || row.includes("DESCRIPCION")) {
+                        headerRowIndex = i;
+                        row.forEach((cell, idx) => {
+                            if (cell.includes("CÓDIGO") || cell.includes("CODIGO")) colCode = idx;
+                            if (cell.includes("DESCRIPCIÓN") || cell.includes("DESCRIPCION")) colDesc = idx;
+                            if (cell.includes("UNIDAD") || cell.includes("UND")) colUnit = idx;
+                            if (cell.includes("CANTIDAD") || cell.includes("TOTAL")) colQty = idx;
+                        });
+                        break;
+                    }
+                }
+
+                if (colDesc === -1 || colQty === -1) {
+                    showToast("Error: No se encontraron columnas 'Descripción' y 'Cantidad'.");
+                    return;
+                }
+
+                let itemsAdded = 0;
+                let itemsMatched = 0;
+                
+                for (let i = headerRowIndex + 1; i < jsonData.length; i++) {
+                    const row = jsonData[i];
+                    if (!row || row.length === 0) continue;
+
+                    // Validar existencia de celda antes de toString()
+                    const descRaw = (row[colDesc] !== undefined && row[colDesc] !== null) ? row[colDesc].toString().trim() : "";
+                    if (descRaw === "") continue; 
+
+                    const rawCode = (colCode !== -1 && row[colCode]) ? row[colCode].toString().trim() : "";
+                    const rawUnit = (colUnit !== -1 && row[colUnit]) ? row[colUnit].toString().trim() : "glb";
+                    
+                    // Manejo seguro de cantidad
+                    let rawQty = 0;
+                    if (colQty !== -1 && row[colQty] !== undefined && row[colQty] !== null) {
+                        // ExcelJS a veces devuelve objetos para celdas con fórmulas, intentamos obtener 'result' o el valor directo
+                        let val = row[colQty];
+                        if(typeof val === 'object' && val.result !== undefined) val = val.result;
+                        rawQty = parseFloat(val);
+                    }
+                    if (isNaN(rawQty)) rawQty = 0;
+
+                    // Smart Matching
+                    const match = findBestMatchInBank(descRaw, rawUnit);
+                    let newItem = match ? JSON.parse(JSON.stringify(match)) : { materials: [], labor: [], equipos: [] };
+                    if(match) itemsMatched++;
+
+                    newItem.id = Date.now() + Math.floor(Math.random() * 100000) + i;
+                    newItem.moduleId = appData.activeModuleId;
+                    newItem.projectCode = rawCode;
+                    newItem.description = descRaw;
+                    newItem.unit = rawUnit;
+                    newItem.quantity = rawQty;
+
+                    appData.projectItems.push(newItem);
+                    itemsAdded++;
+                }
+
+                saveData();
+                renderB1();
+                showToast(`Importación completa: ${itemsAdded} ítems (${itemsMatched} del Banco).`);
+                
+            } catch (err) {
+                console.error(err);
+                showToast("Error al procesar el archivo Excel.");
+            }
+            input.value = '';
+        };
+        reader.readAsArrayBuffer(file);
+    }
+
+    // Función auxiliar para normalizar texto (quitar acentos, minúsculas, espacios extra)
+    function normalizeStr(str) {
+        return str.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/\s+/g, ' ').trim();
+    }
+
+    // Algoritmo de Búsqueda "Smart"
+    function findBestMatchInBank(targetDesc, targetUnit) {
+        if (!appData.itemBank || appData.itemBank.length === 0) return null;
+        
+        const nTargetDesc = normalizeStr(targetDesc);
+        const nTargetUnit = normalizeStr(targetUnit);
+        
+        let bestMatch = null;
+        let bestScore = 0;
+        
+        // Umbral mínimo para considerar coincidencia (evita falsos positivos muy lejanos)
+        const minScoreThreshold = 0.4; 
+
+        appData.itemBank.forEach(bankItem => {
+            let score = 0;
+            const nBankDesc = normalizeStr(bankItem.description);
+            const nBankUnit = normalizeStr(bankItem.unit);
+
+            // 1. Coincidencia de Unidad (Peso: 20%)
+            // Es importante que la unidad coincida (ej: m2 vs m3 cambia todo)
+            if (nBankUnit === nTargetUnit) {
+                score += 0.3;
+            } else if ((nBankUnit.includes(nTargetUnit) || nTargetUnit.includes(nBankUnit)) && nTargetUnit.length > 1) {
+                score += 0.15; // Coincidencia parcial de unidad
+            }
+
+            // 2. Coincidencia de Descripción (Peso: 80%)
+            if (nBankDesc === nTargetDesc) {
+                score += 0.7; // Coincidencia exacta
+            } else {
+                // Tokenización: Comparamos palabra por palabra
+                const targetWords = nTargetDesc.split(' ').filter(w => w.length > 2); // Ignorar palabras cortas (de, y, el)
+                const bankWords = nBankDesc.split(' ');
+                
+                if (targetWords.length > 0) {
+                    let matches = 0;
+                    targetWords.forEach(word => {
+                        if (nBankDesc.includes(word)) matches++;
+                    });
+                    
+                    // Porcentaje de palabras coincidentes
+                    const wordScore = (matches / targetWords.length) * 0.7;
+                    score += wordScore;
+                }
+            }
+
+            // Guardar el mejor resultado
+            if (score > bestScore && score >= minScoreThreshold) {
+                bestScore = score;
+                bestMatch = bankItem;
+            }
+        });
+
+        return bestMatch;
     }
 
 </script>
