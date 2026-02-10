@@ -16,6 +16,7 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="PresuRE">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.3.0/exceljs.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.15.0/Sortable.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
@@ -4516,8 +4517,23 @@ Cantidades: ${s.decimals_qty} decimales`;
 
     // --- ARCHIVOS RUPE ---
     async function exportB1ToExcel() {
+        // 1. Verificar librería ZIP
+        if (typeof JSZip === 'undefined') {
+            showToast("Error: Librería JSZip no cargada.");
+            return;
+        }
+
         const pName = document.getElementById('reportProjectName')?.value || "PROYECTO";
-        const f5 = (n) => parseFloat(parseFloat(n || 0).toFixed(5));
+        const zip = new JSZip();
+        
+        showToast("Generando archivos con 5 decimales...");
+
+        // --- HELPER DE REDONDEO ESTRICTO (5 DECIMALES) ---
+        const n = (num) => {
+            if (num === null || num === undefined || isNaN(num)) return 0;
+            // Redondea matemáticamente a 5 decimales y devuelve número
+            return parseFloat(Number(num).toFixed(5));
+        };
 
         // --- ESTILOS ---
         const borderStyle = {
@@ -4526,7 +4542,7 @@ Cantidades: ${s.decimals_qty} decimales`;
 
         const styleHeader = {
             font: { bold: true, color: { argb: 'FFFFFFFF' } },
-            fill: { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF2D3748' } }, // Gris oscuro
+            fill: { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF2D3748' } },
             alignment: { horizontal: 'center', vertical: 'middle' },
             border: borderStyle
         };
@@ -4535,37 +4551,45 @@ Cantidades: ${s.decimals_qty} decimales`;
             border: borderStyle,
             alignment: { vertical: 'middle' }
         };
-
-        // Estilo para la fila gris de items (padres)
+        
         const styleItemFill = {
-            type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF0F4F8' } // Gris muy claro
-        };
-
-        // --- HELPER PARA GUARDAR ---
-        const finalizeAndSave = async (wb, fileName) => {
-            const buffer = await wb.xlsx.writeBuffer();
-            saveAs(new Blob([buffer]), fileName);
+            type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF0F4F8' }
         };
 
         // --- HELPER PARA OBTENER INSUMOS GLOBALES ---
         const getProjectInsumos = (type) => {
-            const list = [];
+            const map = new Map();
             appData.projectItems.forEach(item => {
                 const resources = (type === 'mat') ? item.materials : (type === 'mo' ? item.labor : item.equipos);
+                
+                // Cantidad del ítem a 5 decimales
+                const itemQty = n(item.quantity);
+
                 resources?.forEach(r => {
-                    const existing = list.find(x => x.desc === r.desc && x.unit === r.unit);
-                    if (existing) {
-                        existing.qty += (r.qty * item.quantity);
+                    const key = `${r.desc.trim().toLowerCase()}|${r.unit.trim().toLowerCase()}`;
+                    
+                    // Cálculo: Rendimiento * Cantidad Obra
+                    const totalQty = n(r.qty * itemQty); 
+
+                    if (map.has(key)) {
+                        const existing = map.get(key);
+                        existing.qty = n(existing.qty + totalQty); // Suma acumulada redondeada
+                        existing.price = Math.max(existing.price, r.price);
                     } else {
-                        list.push({ desc: r.desc, unit: r.unit, price: r.price, qty: (r.qty * item.quantity) });
+                        map.set(key, { 
+                            desc: r.desc, 
+                            unit: r.unit, 
+                            price: r.price, 
+                            qty: totalQty 
+                        });
                     }
                 });
             });
-            return list;
+            return Array.from(map.values()).sort((a,b) => a.desc.localeCompare(b.desc));
         };
 
         // ================================================================
-        // A. GENERAR ARCHIVOS B3 (MATERIALES, MANO DE OBRA, EQUIPO)
+        // 1. GENERAR ARCHIVOS B3 (MATERIALES, MO, EQUIPO)
         // ================================================================
         const specs = [
             { type: 'mat', name: 'B3-MATERIALES.xlsx', sheet: 'B3-MATERIALES', title: 'MATERIALES' },
@@ -4577,38 +4601,36 @@ Cantidades: ${s.decimals_qty} decimales`;
             const wb = new ExcelJS.Workbook();
             const ws = wb.addWorksheet(spec.sheet);
 
-            // Título
             ws.addRow(["", spec.title, "", ""]);
             ws.mergeCells('B1:D1');
             ws.getCell('B1').font = { bold: true, size: 12 };
 
-            // Cabecera
             const hRow = ws.addRow(["Nº", "DESCRIPCIÓN", "UNIDAD", "PRECIO UNITARIO"]);
             for(let i=1; i<=4; i++) hRow.getCell(i).style = styleHeader;
 
-            // Anchos
-            ws.getColumn(1).width = 3;
-            ws.getColumn(2).width = 50;
-            ws.getColumn(3).width = 12;
-            ws.getColumn(4).width = 18;
+            ws.getColumn(1).width = 5; ws.getColumn(2).width = 50;
+            ws.getColumn(3).width = 15; ws.getColumn(4).width = 20;
 
-            // Datos
             const data = getProjectInsumos(spec.type);
+            
             data.forEach((ins, i) => {
-                const row = ws.addRow([i + 1, ins.desc, ins.unit, f5(ins.price)]);
+                // Forzamos n() en el precio
+                const row = ws.addRow([i + 1, ins.desc, ins.unit, n(ins.price)]);
                 row.eachCell(c => Object.assign(c, styleCell));
+                
+                // Forzamos formato visual '0.00000' en la columna de precio (4)
                 row.getCell(4).numFmt = '0.00000';
             });
 
-            // Fila Asterisco
             const starRow = ws.addRow(["*", "", "", ""]);
             for(let i=1; i<=4; i++) starRow.getCell(i).border = borderStyle;
-            
-            await finalizeAndSave(wb, spec.name);
+
+            const buffer = await wb.xlsx.writeBuffer();
+            zip.file(spec.name, buffer);
         }
 
         // ================================================================
-        // B. GENERAR FORM_CANTIDADES.xlsx (3 HOJAS)
+        // 2. GENERAR FORM_CANTIDADES.xlsx
         // ================================================================
         const wbForm = new ExcelJS.Workbook();
         const forms = [
@@ -4619,56 +4641,74 @@ Cantidades: ${s.decimals_qty} decimales`;
 
         forms.forEach(f => {
             const ws = wbForm.addWorksheet(f.sheet);
-            
-            // Título
             ws.addRow(["", f.title]);
             
-            // Cabecera
             const hRow = ws.addRow(["Código", "Descripción", "Unidad", "Cantidad", "Precio Unitario", "Precio Total (Bs)"]);
             for(let i=1; i<=6; i++) hRow.getCell(i).style = styleHeader;
 
-            // Anchos
-            ws.getColumn(1).width = 10;
-            ws.getColumn(2).width = 45;
-            ws.getColumn(3).width = 10;
-            ws.getColumn(4).width = 15;
-            ws.getColumn(5).width = 15;
-            ws.getColumn(6).width = 18;
+            ws.getColumn(1).width = 10; ws.getColumn(2).width = 45;
+            ws.getColumn(3).width = 10; ws.getColumn(4).width = 15;
+            ws.getColumn(5).width = 15; ws.getColumn(6).width = 18;
 
             appData.projectItems.forEach(item => {
-                // Fila de ITEM PADRE
-                // Se crea la fila y se itera solo de la columna 1 a la 6 para aplicar el estilo
-                const code = item.projectCode ? `>${item.projectCode}` : `>${item.id}`;
+                const code = item.projectCode ? `>${item.projectCode}` : `>${item.code || ''}`;
                 const itemRow = ws.addRow([code, item.description, "", "", "", ""]);
                 
                 for(let c=1; c<=6; c++) {
                     const cell = itemRow.getCell(c);
-                    cell.fill = styleItemFill; // Color de fondo solo en celdas de la tabla
+                    cell.fill = styleItemFill;
                     cell.font = { bold: true };
                     cell.border = borderStyle;
                 }
 
-                // Filas de Insumos
+                // Cantidad del ítem principal a 5 decimales
+                const itemQty = n(item.quantity);
+
                 (item[f.key] || []).forEach((r, idx) => {
-                    const cantItem = f5(r.qty);
-                    const pTotal = f5(cantItem * r.price);
-                    const row = ws.addRow([idx + 1, r.desc, r.unit, cantItem, f5(r.price), pTotal]);
+                    // CÁLCULOS MATEMÁTICOS ESTRICTOS
+                    // 1. Cantidad Total = Rendimiento * Cantidad Item
+                    const totalQty = n(r.qty * itemQty);
+                    
+                    // 2. Precio Unitario
+                    const unitPrice = n(r.price);
+                    
+                    // 3. Precio Total = Cantidad Total (ya redondeada) * P.Unitario (ya redondeado)
+                    const totalPrice = n(totalQty * unitPrice);
+
+                    const row = ws.addRow([
+                        idx + 1, 
+                        r.desc, 
+                        r.unit, 
+                        totalQty, 
+                        unitPrice, 
+                        totalPrice
+                    ]);
+                    
                     row.eachCell(c => Object.assign(c, styleCell));
-                    row.getCell(4).numFmt = '0.00000';
-                    row.getCell(5).numFmt = '0.00000';
-                    row.getCell(6).numFmt = '0.00000';
+
+                    // APLICAR FORMATO VISUAL 0.00000 A LAS TRES COLUMNAS NUMÉRICAS
+                    row.getCell(4).numFmt = '0.00000'; // Cantidad
+                    row.getCell(5).numFmt = '0.00000'; // P. Unit
+                    row.getCell(6).numFmt = '0.00000'; // Total
                 });
             });
 
-            // Fila Asterisco (Cierre de tabla)
             const starRow = ws.addRow(["*", "", "", "", "", ""]);
-            for(let c=1; c<=6; c++) {
-                starRow.getCell(c).border = borderStyle;
-            }
+            for(let c=1; c<=6; c++) starRow.getCell(c).border = borderStyle;
         });
 
-        await finalizeAndSave(wbForm, "FORM_CANTIDADES.xlsx");
-        showToast("Exportación completada.");
+        const bufferForm = await wbForm.xlsx.writeBuffer();
+        zip.file("FORM_CANTIDADES.xlsx", bufferForm);
+
+        // ================================================================
+        // 3. DESCARGA
+        // ================================================================
+        showToast("Comprimiendo ZIP...");
+        zip.generateAsync({type:"blob"}).then(function(content) {
+            const dateStr = new Date().toISOString().slice(0,10);
+            saveAs(content, `Reportes_SICOES_5DEC_${pName}_${dateStr}.zip`);
+            showToast("Descarga lista");
+        });
     }
 
     function exportProjectJSON() {
